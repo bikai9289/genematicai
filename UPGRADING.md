@@ -1,5 +1,18 @@
 # Upgrading an existing project
 
+## 2026-10-23 — Launch credit packs and model pricing
+
+- New USD-only products: genematic_starter_v2 ($9.99/400), genematic_creator_v2 ($24.99/1100), genematic_studio_v2 ($49.99/2300). Each expires 365 days after purchase. Existing product IDs and expiry rules remain intact for historical orders and fulfillment.
+- Update Creem/Waffo product mappings for the new IDs and exact USD amounts before enabling checkout. New packs have no CNY price, so Alipay/WeChat are unavailable for these packs.
+- Deploy frontend and backend together: Seedance 2.5 costs 28/60/150 credits per second at 480p/720p/1080p; Nano Banana Pro costs 18 credits at 1K/2K and 24 at 4K. These generation rates apply to all balances; communicate rate changes to existing customers before deployment. In-flight tasks retain their recorded charge.
+- No automatic trial grants, subscription, permanent file storage or priority support is introduced. Failure refunds continue through existing atomic credit flows.
+
+## 2026-10-22 — KIE request and billing alignment
+
+- Redeploy server and frontend together. Nano Banana Pro now calls the actual Pro model, so provider costs may differ from the former ordinary Nano Banana mapping.
+- Seedance 2.5 now forwards first/last frame images. KIE Kling and Wan 2.7 offer only 720p/1080p; unsupported video resolutions are rejected before billing instead of silently upgraded.
+- The admin KIE test uses Nano Banana Pro and respects the configured base URL. A submitted task still requires completion checking.
+
 Read this when a project built from this template pulls newer template code.
 Entries are newest first. Apply **every entry dated after the template version
 the project last pulled**, oldest of those first.

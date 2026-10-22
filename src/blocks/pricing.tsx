@@ -31,6 +31,7 @@ import {
   type PaymentProvider,
 } from '@/components/payment-provider-modal';
 import { FAQSection } from '@/components/sites/creation/FAQSection';
+import { calculateCredits } from '@/components/sites/shared/models';
 
 const ALL_PROVIDERS: PaymentProvider[] = [
   'stripe',
@@ -78,84 +79,48 @@ export function Pricing() {
   );
   const paymentReady = enabledProviders.length > 0;
 
-  const isZh = getLocale() === 'zh';
-
   const plans: PricingPlan[] = [
-    {
-      id: 'starter',
-      name: m['stp.pricing.starter_title'](),
-      price: isZh ? '¥71.99' : '$9.99',
+    { id: 'starter', name: 'Starter', productId: 'genematic_starter_v2' },
+    { id: 'creator', name: 'Creator', productId: 'genematic_creator_v2' },
+    { id: 'studio', name: 'Studio', productId: 'genematic_studio_v2' },
+  ].map((tier) => {
+    const product = getPricingProduct(tier.productId)!;
+    return {
+      ...tier,
+      price: formatCheckoutAmount(product.priceInCents, product.currency),
+      priceInCents: product.priceInCents,
+      credits: product.credits,
+      creditsValidDays: product.creditsValidDays!,
       period: m['stp.pricing.one_time'](),
-      description: m['stp.pricing.starter_desc'](),
+      description: m['stp.pricing.pack_description'](),
+      popular: tier.id === 'creator',
+      badge: tier.id === 'creator' ? m['stp.pricing.recommended']() : undefined,
       features: [
-        m['stp.pricing.feat_400_credits'](),
-        m['stp.pricing.feat_valid_1m'](),
-        m['stp.pricing.feat_full_access'](),
-        m['stp.pricing.feat_up_6_vid'](),
-        m['stp.pricing.feat_up_60_img'](),
-      ],
-      cta: m['stp.pricing.buy_now'](),
-      productId: 'nanobanana_joyflix_starter',
-      priceInCents: isZh ? 7199 : 999,
-      credits: 400,
-      creditsValidDays: 30,
-      metrics: {
-        videos: '6',
-        images: '60',
-      },
-    },
-    {
-      id: 'standard',
-      name: m['stp.pricing.standard_title'](),
-      price: isZh ? '¥359.99' : '$49.99',
-      period: m['stp.pricing.one_time'](),
-      description: m['stp.pricing.standard_desc'](),
-      popular: true,
-      badge: m['stp.pricing.most_popular'](),
-      features: [
-        m['stp.pricing.feat_2500_credits'](),
-        m['stp.pricing.feat_valid_3m'](),
-        m['stp.pricing.feat_full_access'](),
-        m['stp.pricing.feat_priority_sup'](),
-        m['stp.pricing.feat_up_37_vid'](),
-        m['stp.pricing.feat_up_400_img'](),
-      ],
-      cta: m['stp.pricing.buy_now'](),
-      productId: 'nanobanana_joyflix_standard',
-      priceInCents: isZh ? 35999 : 4999,
-      credits: 2500,
-      creditsValidDays: 90,
-      metrics: {
-        videos: '37',
-        images: '400',
-      },
-    },
-    {
-      id: 'premium',
-      name: m['stp.pricing.premium_title'](),
-      price: isZh ? '¥719.99' : '$99.99',
-      period: m['stp.pricing.one_time'](),
-      description: m['stp.pricing.premium_desc'](),
-      badge: m['stp.pricing.max_power'](),
-      features: [
-        m['stp.pricing.feat_6000_credits'](),
+        m['stp.pricing.credit_count']({ count: product.credits }),
         m['stp.pricing.feat_valid_1y'](),
-        m['stp.pricing.feat_full_access'](),
-        m['stp.pricing.feat_priority_sup'](),
-        m['stp.pricing.feat_up_90_vid'](),
-        m['stp.pricing.feat_up_1000_img'](),
+        m['stp.pricing.model_cost_notice'](),
+        m['stp.pricing.failure_refund'](),
       ],
       cta: m['stp.pricing.buy_now'](),
-      productId: 'nanobanana_joyflix_premium',
-      priceInCents: isZh ? 71999 : 9999,
-      credits: 6000,
-      creditsValidDays: 365,
       metrics: {
-        videos: '90',
-        images: '1,000',
+        videos: String(
+          Math.floor(
+            product.credits /
+              calculateCredits('seedance-2-5', 'video', {
+                duration: '5s',
+                resolution: '720p',
+              })
+          )
+        ),
+        images: String(
+          Math.floor(
+            product.credits /
+              calculateCredits('nano-banana-pro', 'image', { resolution: '1K' })
+          )
+        ),
       },
-    },
-  ];
+    };
+  });
 
   const pricingFaqs = [
     {
@@ -189,7 +154,7 @@ export function Pricing() {
         product_name: plan.name,
         plan_name: plan.name,
         price: plan.priceInCents,
-        currency: isZh ? 'cny' : 'usd',
+        currency: 'usd',
         type: 'one-time',
         description: plan.name,
         credits: plan.credits,
@@ -293,8 +258,7 @@ export function Pricing() {
   ): Partial<Record<PaymentProvider, string>> {
     const product = getPricingProduct(plan.productId);
     if (!product) return {};
-    const shownCurrency =
-      isZh && product.currencies?.cny != null ? 'cny' : product.currency;
+    const shownCurrency = product.currency;
     const notes: Partial<Record<PaymentProvider, string>> = {};
     for (const p of providersForPlan(plan)) {
       const pricing = resolveProviderCheckoutPricing(product, {
@@ -468,6 +432,7 @@ export function Pricing() {
                     type="button"
                     disabled={
                       !paymentReady ||
+                      providersForPlan(plan).length === 0 ||
                       (checkoutMutation.isPending &&
                         pendingPlan?.id === plan.id)
                     }
@@ -493,6 +458,9 @@ export function Pricing() {
           })}
         </div>
 
+        <p className="text-muted-foreground mt-6 text-center text-sm">
+          {m['stp.pricing.example_note']()}
+        </p>
         {/* Pricing FAQs Section */}
         <FAQSection title={m['stp.pricing.faq_title']()} items={pricingFaqs} />
 

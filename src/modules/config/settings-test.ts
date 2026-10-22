@@ -580,11 +580,12 @@ async function testKie(
 
   const provider = new KieProvider({
     apiKey: configs.kie_api_key,
+    baseUrl: configs.kie_base_url?.trim() || undefined,
   });
   const result = await provider.generate({
     params: {
       mediaType: AIMediaType.IMAGE,
-      model: 'nano-banana',
+      model: 'nano-banana-pro',
       prompt: inputs.prompt || 'a cute cat',
     },
   });

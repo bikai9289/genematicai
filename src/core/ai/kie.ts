@@ -25,7 +25,7 @@ function normalizeKieImageModel(model: string, imageToImage: boolean): string {
   if (model === 'seedream-5-0-pro') return `seedream/5-pro-${suffix}`;
   if (model === 'nano-banana-2') return 'nano-banana-2-lite';
   if (model === 'nano-banana-pro') {
-    return imageToImage ? 'google/nano-banana-edit' : 'google/nano-banana';
+    return 'nano-banana-pro';
   }
   return normalizeAIModel(model, 'image');
 }
@@ -370,7 +370,7 @@ export class KieProvider implements AIProvider {
           options.image_urls) ||
         (options.image_url ? [options.image_url] : undefined);
       if (inputImages && Array.isArray(inputImages)) {
-        if (isMinimaxH3 || isDoubaoSeedance) {
+        if (isMinimaxH3 || isDoubaoSeedance || isSeedance25) {
           if (inputImages[0]) payload.input.first_frame_url = inputImages[0];
           if (inputImages[1]) payload.input.last_frame_url = inputImages[1];
         } else if (isWan27) {
@@ -381,7 +381,7 @@ export class KieProvider implements AIProvider {
         } else if (isKling30Turbo) {
           payload.input.image_urls = inputImages;
         } else {
-          // Seedance 2.5 and Wan 3.0 text endpoints do not define image input.
+          // Remaining text-only endpoints do not define image input.
         }
       }
       if (options.aspect_ratio) {

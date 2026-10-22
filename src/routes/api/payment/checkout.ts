@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { getAuth } from '@/core/auth';
 import {
   getPricingProduct,
+  isPricingProductForSale,
   resolveProviderCheckoutPricing,
 } from '@/config/pricing';
 import { getAllConfigs } from '@/modules/config/service';
@@ -71,6 +72,11 @@ async function POST({ request }: { request: Request }) {
     const product = getPricingProduct(product_id);
     if (!product) {
       return respErr('Unknown product');
+    }
+    if (!isPricingProductForSale(product.productId)) {
+      return respErr(
+        'This product is no longer available. Please select a current credit pack.'
+      );
     }
 
     // Resolve the provider exactly as createCheckout will (requested, else

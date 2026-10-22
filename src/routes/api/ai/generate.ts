@@ -33,6 +33,7 @@ import {
   getModelMaxImages,
   getModelMaxPromptLength,
   getModelSupportedDurations,
+  getModelSupportedResolutions,
 } from '@/components/sites/shared/models';
 
 import { getPublicTaskErrorCode, toPublicTaskResult } from './-task-utils';
@@ -181,14 +182,14 @@ async function POST({ request }: { request: Request }) {
         options.resolution = selectedModel.defaultResolution || '1K';
       }
     } else if (mediaType === 'video' && options.resolution) {
-      const supported = selectedModel.supportedResolutions || ['720P', '1080P'];
+      const supported = getModelSupportedResolutions(model, provider?.name);
       const matched = supported.find(
         (r) => r.toLowerCase() === String(options.resolution).toLowerCase()
       );
       if (matched) {
         options.resolution = matched;
       } else {
-        options.resolution = selectedModel.defaultResolution || '720P';
+        return respErr('Unsupported resolution for this model');
       }
     }
     if (

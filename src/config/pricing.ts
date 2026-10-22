@@ -149,6 +149,39 @@ export const pricingCatalog: Record<string, PricingProduct> = {
     currency: 'usd',
     credits: 10000000,
   },
+  genematic_starter_v2: {
+    productId: 'genematic_starter_v2',
+    productName: 'Starter Pack',
+    planName: 'Starter',
+    description: '400 AI Credits',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 999,
+    currency: 'usd',
+    credits: 400,
+    creditsValidDays: 365,
+  },
+  genematic_creator_v2: {
+    productId: 'genematic_creator_v2',
+    productName: 'Creator Pack',
+    planName: 'Creator',
+    description: '1100 AI Credits',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 2499,
+    currency: 'usd',
+    credits: 1100,
+    creditsValidDays: 365,
+  },
+  genematic_studio_v2: {
+    productId: 'genematic_studio_v2',
+    productName: 'Studio Pack',
+    planName: 'Studio',
+    description: '2300 AI Credits',
+    type: PaymentType.ONE_TIME,
+    priceInCents: 4999,
+    currency: 'usd',
+    credits: 2300,
+    creditsValidDays: 365,
+  },
   nanobanana_joyflix_starter: {
     productId: 'nanobanana_joyflix_starter',
     productName: 'Starter Pack',
@@ -192,6 +225,15 @@ export const pricingCatalog: Record<string, PricingProduct> = {
     },
   },
 };
+
+/** Historical products remain available for fulfillment, not new purchases. */
+export function isPricingProductForSale(productId: string): boolean {
+  return [
+    'genematic_starter_v2',
+    'genematic_creator_v2',
+    'genematic_studio_v2',
+  ].includes(productId);
+}
 
 /**
  * Catalog price for checkout: the requested currency when the product lists

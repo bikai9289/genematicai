@@ -39,7 +39,7 @@ export const AI_MODELS: Record<string, ModelConfig> = {
     id: 'nano-banana-pro',
     name: 'Nano Banana Pro',
     icon: '/oss/model/icon/nano-banana-80.webp',
-    credits: 12,
+    credits: 18,
     badge: 'Pro',
     type: 'image',
     supportsImageToImage: true,
@@ -93,7 +93,7 @@ export const AI_MODELS: Record<string, ModelConfig> = {
     id: 'seedance-2-5',
     name: 'Seedance 2.5',
     icon: '/oss/model/icon/bytedance-80.webp',
-    credits: 20,
+    credits: 300,
     badge: 'Dynamic',
     type: 'video',
     supportsFirstLastFrame: true,
@@ -330,6 +330,7 @@ export function calculateCredits(
     const model = AI_MODELS[modelId];
     const base = model ? model.credits : 6;
     const res = params?.resolution?.toUpperCase();
+    if (modelId === 'nano-banana-pro') return res === '4K' ? 24 : 18;
     let resolutionMultiplier = 1;
     if (res === '2K') resolutionMultiplier = 1.5;
     else if (res === '4K') resolutionMultiplier = 2;
@@ -338,7 +339,7 @@ export function calculateCredits(
 
   if (type === 'video') {
     const perFiveSecondsAt720p: Record<string, number> = {
-      'seedance-2-5': 90,
+      'seedance-2-5': 300,
       'doubao-seedance-2-0': 85,
       'wan-3-0': 26,
       'kling-3-0-turbo': 35,
@@ -347,6 +348,19 @@ export function calculateCredits(
       'wan-2-7': 21,
     };
     const base = perFiveSecondsAt720p[modelId] ?? 45;
+    if (modelId === 'seedance-2-5') {
+      const rate =
+        params?.resolution?.toUpperCase() === '480P'
+          ? 28
+          : params?.resolution?.toUpperCase() === '1080P'
+            ? 150
+            : 60;
+      const seconds = Math.max(
+        1,
+        parseInt(String(params?.duration || '5'), 10) || 5
+      );
+      return Math.ceil(rate * seconds);
+    }
     const res = params?.resolution?.toUpperCase();
     const resolutionMultiplier =
       res === '480P'
@@ -385,6 +399,8 @@ export function getModelSupportedResolutions(
   const model = AI_MODELS[modelId];
   if (!model) return EMPTY_STRING_ARRAY;
   if (provider === 'kie' && model.type === 'video') {
+    if (modelId === 'kling-3-0-turbo' || modelId === 'wan-2-7')
+      return ['720p', '1080p'];
     if (modelId === 'wan-3-0') return ['480P'];
     if (modelId === 'minimax-h3') return ['768P', '1080P'];
     if (modelId === 'minimax-hailuo-2-3') return ['768P'];
