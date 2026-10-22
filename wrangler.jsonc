@@ -1,0 +1,40 @@
+// Cloudflare Workers deploy config for genematicai.
+// Secrets (AUTH_SECRET, CONFIG_ENCRYPTION_KEY) stay in the dashboard / wrangler secret — never here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "genematicai",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+  },
+  "vars": {
+    "DATABASE_PROVIDER": "d1",
+    "VITE_APP_URL": "https://genematicai.bikai9289.workers.dev",
+    "VITE_APP_NAME": "Genematic AI",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "genematicai-db",
+      "database_id": "ebcbcd3d-eaca-48ed-a9f1-8335952dbb4d",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PROVIDER_GENERATE_RATE_LIMITER",
+        "class_name": "ProviderGenerateRateLimiter",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "provider-generate-rate-limiter-v1",
+      "new_sqlite_classes": ["ProviderGenerateRateLimiter"],
+    },
+  ],
+  "triggers": {
+    "crons": ["0 16 * * *"],
+  },
+}

@@ -17,10 +17,9 @@
 src/routeTree.gen.ts
 src/paraglide/
 
-# cloudflare — wrangler.jsonc is your working copy (real D1 id, URLs);
-# the committed template is wrangler.example.jsonc
+# cloudflare — wrangler.jsonc is committed so Workers Builds can deploy.
+# Secrets stay in the dashboard (`wrangler secret`), not in this file.
 /.wrangler/
-wrangler.jsonc
 
 # claude code local state
 .claude/scheduled_tasks.lock
