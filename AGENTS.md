@@ -14,6 +14,8 @@ This is a **headless SaaS engine** — pre-wired business logic (payments, credi
 - **Database:** Drizzle ORM — supports PostgreSQL, MySQL, SQLite, Turso, Cloudflare D1
 - **All code is self-contained** — no external packages for business logic. Payment, email, storage, AI, auth, and utils are inlined in `src/core/` and `src/lib/`.
 
+11
+
 ## Commands
 
 - `pnpm dev` — Vite dev server (port 3000)
@@ -35,7 +37,7 @@ pnpm db:push              # create tables
 pnpm dev                  # start dev server
 ```
 
-**Env files:** copy `.env.example` → `.env.development` for local dev (gitignored). The `db:*`
+**Env files:** copy `.env.example` → `.env.development` for local dev (gitignored). The `db:`\*
 loader (`scripts/with-env.ts`) and Vite (`loadEnvFiles()` called from `vite.config.ts`) both
 resolve `.env.{NODE_ENV}` before `.env.local`/`.env`, so `.env.development` is the canonical local
 file and server-side `process.env` is populated from it. `.env.example` is the committed template —
@@ -183,7 +185,7 @@ export function MyButton() {
 
 ### Pages & route metadata
 
-Pages are file routes living directly under `src/routes/**` — **there is no `{-$locale}` segment**. URL locale prefixes are handled entirely by the router `rewrite` (`src/router.tsx`) + `paraglideVitePlugin` `urlPatterns` (`vite.config.ts`) + `paraglideMiddleware` (`src/server.ts`). So `createFileRoute` paths have no locale segment:
+Pages are file routes living directly under `src/routes/**` — **there is no** `{-$locale}` **segment**. URL locale prefixes are handled entirely by the router `rewrite` (`src/router.tsx`) + `paraglideVitePlugin` `urlPatterns` (`vite.config.ts`) + `paraglideMiddleware` (`src/server.ts`). So `createFileRoute` paths have no locale segment:
 
 ```tsx
 import { createFileRoute } from '@tanstack/react-router';
@@ -377,7 +379,7 @@ const rows = await db()
 
 ### Atomic writes (money, credits, anything multi-statement)
 
-**Never use `db().transaction()` for writes that must succeed together.** D1 has
+**Never use** `db().transaction()` **for writes that must succeed together.** D1 has
 no interactive transactions, and on D1 `transaction()` just runs the callback
 statement by statement. A failure halfway leaves partial data, such as a paid
 order with no credits. Use `atomic()` from `@/core/db/atomic` instead. It runs
@@ -411,7 +413,7 @@ try {
 - Guards see the earlier steps' writes. Use them as preconditions (claim a
   row before updating it) or postconditions (`remaining_credits >= 0` after a
   relative decrement).
-- Prefer relative updates (``sql`${col} - ${n}` ``) plus a guard over writing
+- Prefer relative updates (`sql`${col} - ${n}`` ) plus a guard over writing
   values computed from a stale read.
 - Credits: `planConsume()` / `planDeductForRefund()` return steps you can
   bundle into your own `atomic()` call (see `ai-tasks/service.ts`).
@@ -446,17 +448,17 @@ anything else:
 
 ### shadcn/ui v4 (Base Nova)
 
-- **No `asChild` prop.** Use `className={cn(buttonVariants())}` on Link instead.
+- **No** `asChild` **prop.** Use `className={cn(buttonVariants())}` on Link instead.
 - Add components: `npx shadcn add button card dialog` (`components.json` has `rsc: false`)
 - Theme colors in `src/styles/globals.css` as CSS variables (oklch)
 
 ### Blocks vs Components
 
-- **`src/blocks/`** — zero-config page sections. Read i18n (`m['...']()` from `@/paraglide/messages.js`), build the content config, and pass it to a component. Drop into pages as `<Hero />`, `<Pricing />`, `<Header />`, `<Footer />` with no props.
-- **`src/components/`** — reusable UI. All content arrives via props; no i18n reads inside. Covers shadcn primitives (`components/ui/`), marketing shells (`SiteHeader`, `SiteFooter`), authenticated-app shells (`AppSidebar`, `AppLayout`), and pure primitives like `PricingTable`.
+- `src/blocks/` — zero-config page sections. Read i18n (`m['...']()` from `@/paraglide/messages.js`), build the content config, and pass it to a component. Drop into pages as `<Hero />`, `<Pricing />`, `<Header />`, `<Footer />` with no props.
+- `src/components/` — reusable UI. All content arrives via props; no i18n reads inside. Covers shadcn primitives (`components/ui/`), marketing shells (`SiteHeader`, `SiteFooter`), authenticated-app shells (`AppSidebar`, `AppLayout`), and pure primitives like `PricingTable`.
 - **Rule:** a file reads translations → block. A file takes all content via props → component.
 - **Pattern:** pages consume only blocks. Blocks read i18n and configure components. Components render — they don't know the app's content.
-- **Naming:** `site-*` = public marketing chrome (`SiteHeader`, `SiteFooter`). `app-*` = authenticated-app chrome (`AppSidebar`, `AppLayout`). These are separate surfaces — don't merge them.
+- **Naming:** `site-`_ = public marketing chrome (`SiteHeader`, `SiteFooter`). `app-_` = authenticated-app chrome (`AppSidebar`, `AppLayout`). These are separate surfaces — don't merge them.
 
 ### Template Philosophy: Blocks Are Disposable, Components Are Durable
 
@@ -464,10 +466,10 @@ This repo ships with a default landing page (`blocks/header`, `hero`, `features`
 
 When starting a new project:
 
-1. **Keep** `src/components/*` and `src/components/ui/*` — they're the durable primitives (`PricingTable`, `SiteHeader`, `SiteFooter`, `AppSidebar`, shadcn UI). These are the chassis.
-2. **Rewrite** `src/blocks/*` — delete the demo blocks, write new ones that wire the user's real content and i18n into the primitives. Or compose fresh sections directly.
+1. **Keep** `src/components/`_ and `src/components/ui/_` — they're the durable primitives (`PricingTable`, `SiteHeader`, `SiteFooter`, `AppSidebar`, shadcn UI). These are the chassis.
+2. **Rewrite** `src/blocks/`\* — delete the demo blocks, write new ones that wire the user's real content and i18n into the primitives. Or compose fresh sections directly.
 3. **Rewrite** `src/routes/index.tsx` — it's ~17 lines of pure composition. Recompose from the new blocks.
-4. **Rewrite** the `landing.*` keys in `messages/en.json` and `messages/zh.json` — the translations that feed the blocks.
+4. **Rewrite** the `landing.`\* keys in `messages/en.json` and `messages/zh.json` — the translations that feed the blocks.
 
 The `/quick-start` and `/clone-website` skills automate this workflow.
 
@@ -479,7 +481,7 @@ The split is not cosmetic — it's **what survives a rebrand**. Primitives survi
 2. **Create module service:** `src/modules/<feature>/service.ts` — pure business logic (unchanged)
 3. **Create API server route:** `src/routes/api/<feature>.ts` — `createFileRoute(...)` with `server.handlers`, calling the service (unchanged)
 4. **Create page:** `src/routes/settings/<feature>.tsx` (or `admin/<feature>.tsx`) — `useQuery` + `@/lib/api-client` to fetch from the API
-5. **Add translations:** add `settings.<feature>.*` (or `admin.<feature>.*`) keys to **both** `messages/en.json` and `messages/zh.json`
+5. **Add translations:** add `settings.<feature>.`_ (or `admin.<feature>._`) keys to **both** `messages/en.json`and`messages/zh.json`
 6. **Add nav entry:** Update the nav array in the layout `src/routes/settings/route.tsx` (or `admin/route.tsx`)
 7. **Need a static page?** Add an MDX file at `src/content/pages/<slug>.{en,zh}.mdx` plus a thin route file `src/routes/(pages)/<slug>.tsx` using `staticPageRouteOptions('<slug>')` from `(pages)/-static-page.tsx`
 
@@ -491,52 +493,65 @@ These come from real findings. Follow them for every feature that touches
 money, credits, permissions, secrets, or user input:
 
 1. **Money and credits**
-   - Never trust a price, amount, credits or plan from the request; look them
-     up in the server catalog (`src/config/pricing.ts`).
-   - Charge each provider in its own currency, and never reuse a USD amount as
-     CNY.
-   - Every write that grants or takes away value goes through `atomic()` with
-     a claim guard, so retries and concurrent webhooks act exactly once.
-   - Back the claim with a database unique key (e.g. `grant_<orderNo>`) so
-     that a status edit can't make it run twice.
-   - Money states (`paid`, `refunding`, `refunded`) change only through the
-     payment flows. Admin edit endpoints must not set them or move an order
-     out of them.
+
+- Never trust a price, amount, credits or plan from the request; look them
+  up in the server catalog (`src/config/pricing.ts`).
+- Charge each provider in its own currency, and never reuse a USD amount as
+  CNY.
+- Every write that grants or takes away value goes through `atomic()` with
+  a claim guard, so retries and concurrent webhooks act exactly once.
+- Back the claim with a database unique key (e.g. `grant_<orderNo>`) so
+  that a status edit can't make it run twice.
+- Money states (`paid`, `refunding`, `refunded`) change only through the
+  payment flows. Admin edit endpoints must not set them or move an order
+  out of them.
+
 2. **Webhooks and callbacks**
-   - A valid signature only proves the provider sent the message. Also check
-     that it is for **this** merchant/app (`app_id`, `mchid`, account) and that
-     the amount and currency match the order before settling.
-   - Make every handler idempotent.
+
+- A valid signature only proves the provider sent the message. Also check
+  that it is for **this** merchant/app (`app_id`, `mchid`, account) and that
+  the amount and currency match the order before settling.
+- Make every handler idempotent.
+
 3. **Permissions**
-   - Every new admin operation gets its own permission code.
-   - Actions that move money or grant privileges (refunds, credits, roles,
-     settings) get a **dedicated** code that is listed explicitly in seeds,
-     never reached through a wildcard such as `admin.payments.*`.
-   - Code that assigns roles or permissions must reject anything beyond the
-     caller's own permissions (`beyondCeiling` in `src/server/admin/ceiling.ts`).
+
+- Every new admin operation gets its own permission code.
+- Actions that move money or grant privileges (refunds, credits, roles,
+  settings) get a **dedicated** code that is listed explicitly in seeds,
+  never reached through a wildcard such as `admin.payments.*`.
+- Code that assigns roles or permissions must reject anything beyond the
+  caller's own permissions (`beyondCeiling` in `src/server/admin/ceiling.ts`).
+
 4. **Secrets**
-   - Store secrets through `saveConfigs` (encrypted at rest) and return them
-     only masked.
-   - If a setting is a URL that a saved secret gets sent to, add it to
-     `ENDPOINT_SECRETS` in `src/modules/config/service.ts`. Changing the URL
-     then requires re-entering the secret.
-   - Never log or echo keys. Agent keys are hash-only and shown once.
+
+- Store secrets through `saveConfigs` (encrypted at rest) and return them
+  only masked.
+- If a setting is a URL that a saved secret gets sent to, add it to
+  `ENDPOINT_SECRETS` in `src/modules/config/service.ts`. Changing the URL
+  then requires re-entering the secret.
+- Never log or echo keys. Agent keys are hash-only and shown once.
+
 5. **Abuse limits**
-   - Rate-limit with `enforceMinIntervalRateLimit`: by IP before auth, then
-     again with `extraKey: session.user.id` after auth. Never key on cookies.
-   - Uploads: allow-list MIME types (no SVG), and cap file count, per-file size
-     and total size.
-   - A setting that becomes a `<script src>` or other executable URL needs a
-     host allow-list taken from deployment env, not from settings. "https"
-     alone is not trust.
+
+- Rate-limit with `enforceMinIntervalRateLimit`: by IP before auth, then
+  again with `extraKey: session.user.id` after auth. Never key on cookies.
+- Uploads: allow-list MIME types (no SVG), and cap file count, per-file size
+  and total size.
+- A setting that becomes a `<script src>` or other executable URL needs a
+  host allow-list taken from deployment env, not from settings. "https"
+  alone is not trust.
+
 6. **Accounts**
-   - Don't auto-link or auto-verify identities. Keep better-auth's
-     `requireLocalEmailVerified`.
-   - Agent and service accounts are `user.type = 'api'`. Exclude them from user
-     lists and analytics.
+
+- Don't auto-link or auto-verify identities. Keep better-auth's
+  `requireLocalEmailVerified`.
+- Agent and service accounts are `user.type = 'api'`. Exclude them from user
+  lists and analytics.
+
 7. **Tests**
-   - Add a test under `tests/` for any change to money, credits or permissions,
-     including the concurrent case.
+
+- Add a test under `tests/` for any change to money, credits or permissions,
+  including the concurrent case.
 
 When a change requires existing projects to act (schema, env, permission
 codes, renamed exports, user-visible behavior), add an entry to
@@ -595,7 +610,7 @@ All functionality is self-contained — no external packages needed.
 
 ## Database Schema (21 tables)
 
-**`schema.ts` is gitignored** — it's the user's working copy generated from a template.
+`schema.ts` **is gitignored** — it's the user's working copy generated from a template.
 
 Three dialect templates are committed to git:
 
@@ -648,15 +663,15 @@ Keep `.env.example` minimal; don't add provider keys to it.
 ## Critical Rules
 
 1. **Don't import between modules** (except the documented payment→credits/subscriptions dependency)
-2. **Don't import server-only modules (`@/modules/*`, `@/core/db`) from components** — use API routes, route loaders, or `createServerFn` instead
-3. **Don't edit `components/ui/*` manually** — use `npx shadcn add`
+2. **Don't import server-only modules (**`@/modules/`**\*,** `@/core/db`**) from components** — use API routes, route loaders, or `createServerFn` instead
+3. **Don't edit** `components/ui/`\* **manually** — use `npx shadcn add`
 4. **Don't hardcode app name** — use `envConfigs.app_name` from `@/config`
-5. **Use `@/lib/api-client` + TanStack Query for client data fetching** — no raw `fetch` in components
-6. **Translations live in `messages/{en,zh}.json`** with flat dot keys; access via `m['ns.key']()` (add the key to both locale files)
-7. **Always verify `pnpm build` passes** after making changes
-8. **Return `respData`/`respErr`** from API routes
-9. **Run the `security-scan` skill before every `git commit`** — it checks for leaked secrets, injection/XSS/logic vulnerabilities in the diff, and `.gitignore`/`.dockerignore` gaps. HIGH findings block the commit.
-10. **Multi-statement writes use `atomic()`, never `db().transaction()`.** The latter is not atomic on D1. See "Atomic writes".
+5. **Use** `@/lib/api-client` **+ TanStack Query for client data fetching** — no raw `fetch` in components
+6. **Translations live in** `messages/{en,zh}.json` with flat dot keys; access via `m['ns.key']()` (add the key to both locale files)
+7. **Always verify** `pnpm build` **passes** after making changes
+8. **Return** `respData`**/**`respErr` from API routes
+9. **Run the** `security-scan` **skill before every** `git commit` — it checks for leaked secrets, injection/XSS/logic vulnerabilities in the diff, and `.gitignore`/`.dockerignore` gaps. HIGH findings block the commit.
+10. **Multi-statement writes use** `atomic()`**, never** `db().transaction()`**.** The latter is not atomic on D1. See "Atomic writes".
 11. **Upgrading a project from newer template code?** Follow `UPGRADING.md`. **Changing the template in a way existing projects must act on?** Add an entry there.
 
 ## Cloud Sandbox Notes (ShipAny Code / e2b)
@@ -675,7 +690,7 @@ domain: `https://<port>-<sandboxId>.e2b.app`.
 - OAuth providers (Google/GitHub) cannot complete their redirect flow on a
   sandbox preview domain; test with email+password instead.
 - The database ships pre-initialized (RBAC + a default admin account:
-  **admin@shipany.site / admin1234**). After starting the dev server, always
+  **[admin@shipany.site](mailto:admin@shipany.site) / admin1234**). After starting the dev server, always
   tell the user they can open the admin console at `<preview-url>/admin`
   (sign in at `<preview-url>/sign-in` with those credentials) to configure
   payments, login providers, email, storage, and AI in Settings.
@@ -689,10 +704,10 @@ domain: `https://<port>-<sandboxId>.e2b.app`.
 
 ## Product UX & Creation Auth Intent Rule Matrix
 
-| Trigger Entry / Location              | User Auth State | User Action           | Interaction & Behavior Upon Completion                                                                                                                                                         |
-| :------------------------------------ | :-------------- | :-------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Home Hero (`/`)**                   | Unauthenticated | Clicks "Upload Image" | Saves draft with `action_intent: 'upload'`. Shows `QuickAuthModal`. Upon login, redirects to target Studio with prompt/model/ratio preserved, **does not auto-generate**, focuses upload zone. |
-| **Home Hero (`/`)**                   | Unauthenticated | Clicks "Generate"     | Saves draft with `action_intent: 'generate'`. Shows `QuickAuthModal`. Upon login, redirects to target Studio with prompt/params and **auto-triggers generation queue**.                        |
-| **Home Hero (`/`)**                   | Authenticated   | Clicks "Generate"     | Direct navigation to target Studio with `auto=1` and params/image, **auto-triggers generation queue** and shows real-time render progress.                                                     |
-| **Studio Workspace (`/workspace/*`)** | Unauthenticated | Clicks "Generate"     | Saves draft with `action_intent: 'generate'`. Shows `QuickAuthModal`. Upon login, **in-place auto-triggers generation** without full page refresh losing local states.                         |
-| **Header / Generic Navigation**       | Unauthenticated | Clicks "Sign In"      | Shows `QuickAuthModal` or normal auth. Upon success, **refreshes current page in-place**.                                                                                                      |
+| Trigger Entry / Location                   | User Auth State | User Action           | Interaction & Behavior Upon Completion                                                                                                                                                         |
+| ------------------------------------------ | --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home Hero (**`/`**)**                    | Unauthenticated | Clicks "Upload Image" | Saves draft with `action_intent: 'upload'`. Shows `QuickAuthModal`. Upon login, redirects to target Studio with prompt/model/ratio preserved, **does not auto-generate**, focuses upload zone. |
+| **Home Hero (**`/`**)**                    | Unauthenticated | Clicks "Generate"     | Saves draft with `action_intent: 'generate'`. Shows `QuickAuthModal`. Upon login, redirects to target Studio with prompt/params and **auto-triggers generation queue**.                        |
+| **Home Hero (**`/`**)**                    | Authenticated   | Clicks "Generate"     | Direct navigation to target Studio with `auto=1` and params/image, **auto-triggers generation queue** and shows real-time render progress.                                                     |
+| **Studio Workspace (**`/workspace/`**\*)** | Unauthenticated | Clicks "Generate"     | Saves draft with `action_intent: 'generate'`. Shows `QuickAuthModal`. Upon login, **in-place auto-triggers generation** without full page refresh losing local states.                         |
+| **Header / Generic Navigation**            | Unauthenticated | Clicks "Sign In"      | Shows `QuickAuthModal` or normal auth. Upon success, **refreshes current page in-place**.                                                                                                      |
