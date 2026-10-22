@@ -12,7 +12,7 @@
   },
   "vars": {
     "DATABASE_PROVIDER": "d1",
-    "VITE_APP_URL": "https://genematicai.bikai9289.workers.dev",
+    "VITE_APP_URL": "https://genematicai.com",
     "VITE_APP_NAME": "Genematic AI",
   },
   "d1_databases": [
