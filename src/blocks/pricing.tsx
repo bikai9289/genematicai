@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import {
   Check,
   Crown,
@@ -71,7 +72,9 @@ export function Pricing({
   const { data: session } = useSession();
 
   const { data: configsData } = usePublicConfig();
-  const configs = configsData ?? {};
+  const initialPaymentFlags =
+    getRouteApi('__root__').useLoaderData()?.paymentFlags;
+  const configs = configsData ?? initialPaymentFlags ?? {};
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PricingPlan | null>(null);
   const [loadingProvider, setLoadingProvider] =
@@ -112,7 +115,7 @@ export function Pricing({
             product.credits /
               calculateCredits('seedance-2-5', 'video', {
                 duration: '5s',
-                resolution: '720p',
+                resolution: '480p',
               })
           )
         ),

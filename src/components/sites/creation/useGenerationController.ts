@@ -288,11 +288,15 @@ export function useGenerationController({
       if (isMusicMode) mediaType = 'music';
 
       const options: any = {
+        media_consent:
+          validImages.length === 0 ||
+          window.confirm(m['generation.media_consent']()),
         mode: effectiveMode,
         visibility: publicVisibility ? 'public' : 'private',
         image_urls: validImages,
         image_input: validImages,
       };
+      if (!options.media_consent) return;
 
       if (inputFirstFrame) {
         options.first_frame_image = inputFirstFrame;

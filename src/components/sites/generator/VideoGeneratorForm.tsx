@@ -27,6 +27,8 @@ export const VIDEO_ASPECT_RATIOS = [
 ];
 
 export interface VideoGeneratorFormProps {
+  mediaConsent: boolean;
+  setMediaConsent: (value: boolean) => void;
   activeTab: 'text-to-video' | 'image-to-video';
   setActiveTab: (tab: 'text-to-video' | 'image-to-video') => void;
   handleRemoveStartImage: () => void;
@@ -63,6 +65,8 @@ export interface VideoGeneratorFormProps {
 }
 
 export function VideoGeneratorForm({
+  mediaConsent,
+  setMediaConsent,
   activeTab,
   setActiveTab,
   handleRemoveStartImage,
@@ -386,6 +390,15 @@ export function VideoGeneratorForm({
         </div>
       </div>
 
+      <label className="text-muted-foreground flex items-start gap-3 text-xs leading-5">
+        <input
+          type="checkbox"
+          checked={mediaConsent}
+          onChange={(e) => setMediaConsent(e.target.checked)}
+          className="mt-1 size-4 shrink-0 accent-current"
+        />
+        <span>{m['generation.media_consent']()}</span>
+      </label>
       {/* Action Button */}
       <div className="pt-2">
         <Button

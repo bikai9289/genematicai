@@ -42,6 +42,7 @@ export function ImageGeneratorWorkspace({
   const { data: publicConfig } = usePublicConfig();
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mediaConsent, setMediaConsent] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'text-to-image' | 'image-to-image'
   >('text-to-image');
@@ -267,6 +268,11 @@ export function ImageGeneratorWorkspace({
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!mediaConsent) {
+      toast.error(m['generation.media_consent_required']());
+      e.target.value = '';
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -356,6 +362,10 @@ export function ImageGeneratorWorkspace({
     const effModelId = overrides?.modelId || selectedModelId;
     const effResolution = overrides?.resolution || resolution;
     const effAspectRatio = overrides?.aspectRatio || aspectRatio;
+    if (effRefImage && !mediaConsent) {
+      toast.error(m['generation.media_consent_required']());
+      return;
+    }
 
     if (effTab === 'image-to-image' && !effRefImage?.trim()) {
       toast.error(m['app.generator.reference_image_required']());
@@ -401,6 +411,7 @@ export function ImageGeneratorWorkspace({
       const effectiveMode = effTab;
       const validImages = effRefImage ? [effRefImage] : [];
       const options: any = {
+        media_consent: mediaConsent,
         mode: effectiveMode,
         visibility: publicVisibility ? 'public' : 'private',
         image_urls: validImages,
@@ -536,6 +547,8 @@ export function ImageGeneratorWorkspace({
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[440px_1fr] xl:grid-cols-[460px_1fr]">
       <ImageGeneratorForm
+        mediaConsent={mediaConsent}
+        setMediaConsent={setMediaConsent}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         refImagePreview={refImagePreview}

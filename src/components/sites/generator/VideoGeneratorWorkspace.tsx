@@ -52,6 +52,7 @@ export function VideoGeneratorWorkspace({
   const { data: publicConfig } = usePublicConfig();
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mediaConsent, setMediaConsent] = useState(false);
   const activeModels = useMemo(() => {
     return getVideoModelsList(publicConfig?.active_ai_provider);
   }, [publicConfig?.active_ai_provider]);
@@ -87,7 +88,7 @@ export function VideoGeneratorWorkspace({
     );
   }, [selectedModelId, publicConfig?.active_ai_provider]);
 
-  const [resolution, setResolution] = useState<string>('720P');
+  const [resolution, setResolution] = useState<string>('480P');
 
   useEffect(() => {
     if (
@@ -336,6 +337,11 @@ export function VideoGeneratorWorkspace({
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!mediaConsent) {
+      toast.error(m['generation.media_consent_required']());
+      e.target.value = '';
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -404,6 +410,11 @@ export function VideoGeneratorWorkspace({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
   const handleEndImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!mediaConsent) {
+      toast.error(m['generation.media_consent_required']());
+      e.target.value = '';
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -469,6 +480,10 @@ export function VideoGeneratorWorkspace({
     const effDuration = overrides?.duration || duration;
     const effResolution = overrides?.resolution || resolution;
     const effAspectRatio = overrides?.aspectRatio || aspectRatio;
+    if ((effStartImage || endImageUrl) && !mediaConsent) {
+      toast.error(m['generation.media_consent_required']());
+      return;
+    }
 
     if (effTab === 'image-to-video' && !effStartImage?.trim()) {
       toast.error(m['app.generator.reference_image_required']());
@@ -517,6 +532,7 @@ export function VideoGeneratorWorkspace({
         supportsFirstLastFrame ? endImageUrl : '',
       ].filter(Boolean);
       const options: any = {
+        media_consent: mediaConsent,
         mode: effectiveMode,
         visibility: publicVisibility ? 'public' : 'private',
         image_urls: validImages,
@@ -662,6 +678,8 @@ export function VideoGeneratorWorkspace({
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[440px_1fr] xl:grid-cols-[460px_1fr]">
       <VideoGeneratorForm
+        mediaConsent={mediaConsent}
+        setMediaConsent={setMediaConsent}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         handleRemoveStartImage={handleRemoveStartImage}

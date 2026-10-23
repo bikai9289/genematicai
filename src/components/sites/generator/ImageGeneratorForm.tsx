@@ -24,6 +24,8 @@ export const ASPECT_RATIOS = [
 ];
 
 export interface ImageGeneratorFormProps {
+  mediaConsent: boolean;
+  setMediaConsent: (value: boolean) => void;
   activeTab: 'text-to-image' | 'image-to-image';
   setActiveTab: (tab: 'text-to-image' | 'image-to-image') => void;
   refImagePreview: string;
@@ -52,6 +54,8 @@ export interface ImageGeneratorFormProps {
 }
 
 export function ImageGeneratorForm({
+  mediaConsent,
+  setMediaConsent,
   activeTab,
   setActiveTab,
   refImagePreview,
@@ -282,6 +286,15 @@ export function ImageGeneratorForm({
         </div>
       </div>
 
+      <label className="text-muted-foreground flex items-start gap-3 text-xs leading-5">
+        <input
+          type="checkbox"
+          checked={mediaConsent}
+          onChange={(e) => setMediaConsent(e.target.checked)}
+          className="mt-1 size-4 shrink-0 accent-current"
+        />
+        <span>{m['generation.media_consent']()}</span>
+      </label>
       {/* Action Button */}
       <div className="pt-2">
         <Button

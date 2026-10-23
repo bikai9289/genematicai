@@ -100,7 +100,7 @@ export const AI_MODELS: Record<string, ModelConfig> = {
     maxImages: 2,
     supportedDurations: ['5s', '10s'],
     supportedResolutions: ['480P', '720P', '1080P'],
-    defaultResolution: '720P',
+    defaultResolution: '480P',
     referenceMediaDuration: { min: 2, max: 30, total: 30 },
     description:
       'High-motion action sequences and expressive character animation.',

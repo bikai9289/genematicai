@@ -1,5 +1,13 @@
 # Upgrading an existing project
 
+## 2026-10-23 Launch copy and reference consent
+
+- Reference-image generation now requires `options.media_consent: true`, including first/last-frame references. API clients must collect an explicit rights declaration. Missing declarations return `MEDIA_CONSENT_REQUIRED` before new credits are consumed. This records a declaration; it does not verify ownership or replace safety screening.
+- Main image/video workspaces collect a checkbox before reference upload. Other generation entry points ask for confirmation before submitting references. Text-only generation remains available without a reference declaration.
+- The default Seedance workspace resolution and pricing examples are now 480p. Existing task charges and balances are unchanged. At 140 credits per 5-second clip, the 400-credit pack covers two such clips.
+- Payment enable flags are server-rendered for consistent pricing CTAs. No keys are exposed by this loader field. The social card now uses a 1200x630 PNG.
+- Terms use the support address and accurately describe currently implemented safeguards. The portrait guide explicitly states that source-video face replacement is not implemented. Independent input/output screening, sample moderation and deferred credit settlement are not introduced by this change.
+
 ## 2026-10-23 — Launch credit packs and model pricing
 
 - New USD-only products: genematic_starter_v2 ($9.99/400), genematic_creator_v2 ($24.99/1100), genematic_studio_v2 ($49.99/2300). Each expires 365 days after purchase. Existing product IDs and expiry rules remain intact for historical orders and fulfillment.

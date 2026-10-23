@@ -88,6 +88,11 @@ const getAnalyticsConfigs = createServerFn()
       const cookieConsentEnabled = configs.cookie_consent_enabled === 'true';
       return {
         session,
+        paymentFlags: Object.fromEntries(
+          ['stripe', 'creem', 'waffo', 'paypal', 'alipay', 'wechat'].map(
+            (name) => [`${name}_enabled`, configs[`${name}_enabled`] || 'false']
+          )
+        ) as Record<string, string>,
         cookieConsentEnabled,
         // The visitor's saved choice, so SSR can render consented scripts.
         cookieConsent: cookieConsentEnabled
@@ -121,6 +126,7 @@ const getAnalyticsConfigs = createServerFn()
       console.error('Failed to get analytics configs:', error);
       return {
         session,
+        paymentFlags: {} as Record<string, string>,
         cookieConsentEnabled: false,
         cookieConsent: null,
         appName: envConfigs.app_name,
@@ -227,11 +233,17 @@ export const Route = createRootRoute({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: appName },
         { property: 'og:description', content: appDescription },
-        { property: 'og:image', content: `${appUrl}/logo.png?v=3` },
+        { property: 'og:image', content: `${appUrl}/og-image.png?v=1` },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        {
+          property: 'og:image:alt',
+          content: 'Genematic AI - Photo to Video AI',
+        },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: appName },
         { name: 'twitter:description', content: appDescription },
-        { name: 'twitter:image', content: `${appUrl}/logo.png?v=3` },
+        { name: 'twitter:image', content: `${appUrl}/og-image.png?v=1` },
       ],
       links: [
         { rel: 'icon', href: '/favicon.ico?v=3', sizes: '32x32' },

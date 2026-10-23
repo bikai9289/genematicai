@@ -25,6 +25,7 @@ import { getUserPlan } from '@/modules/invite-codes/service';
 import { hasPermission } from '@/modules/rbac/service';
 import { createAIWebhookToken } from '@/lib/ai-webhook';
 import { getUuid } from '@/lib/hash';
+import { hasReferenceConsent } from '@/lib/media-consent';
 import { consumeProviderSlidingWindowRateLimit } from '@/lib/rate-limit';
 import { respData, respErr } from '@/lib/resp';
 import {
@@ -114,6 +115,18 @@ async function POST({ request }: { request: Request }) {
     const normalizedImageUrls = (
       Array.isArray(imageUrls) ? imageUrls : imageUrl ? [imageUrl] : []
     ).filter((url): url is string => typeof url === 'string' && Boolean(url));
+    const consentImages = [
+      ...normalizedImageUrls,
+      ...[options.first_frame_image, options.last_frame_image].filter(
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0
+      ),
+    ];
+    if (!hasReferenceConsent(consentImages, options.media_consent)) {
+      return respErr(
+        'MEDIA_CONSENT_REQUIRED: Confirm your rights to the reference materials.'
+      );
+    }
 
     // 清理非当前模态的冲突参数，防止生图携带生视频参数（如 duration, 480P 等）
     if (mediaType === 'image') {
@@ -167,6 +180,7 @@ async function POST({ request }: { request: Request }) {
       return respErr('Prompt or image is required');
     }
 
+    const provider = await getActiveAIProvider();
     const selectedModel = model ? AI_MODELS[model] : undefined;
     if (!selectedModel || selectedModel.type !== mediaType) {
       return respErr('Unsupported model');
@@ -213,7 +227,6 @@ async function POST({ request }: { request: Request }) {
       options.image_input = normalizedImageUrls;
     }
 
-    const provider = await getActiveAIProvider();
     if (!provider && !isMock) {
       return respErr('No AI Provider configured');
     }
