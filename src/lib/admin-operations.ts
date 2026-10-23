@@ -497,58 +497,6 @@ export const adminOperations: AdminOperation[] = [
     'tickets/{id}',
     z.object({ id, status: ticketStatus }).strict()
   ),
-  op(
-    'settings_get',
-    'Read system settings. Secrets are masked and protected keys are excluded.',
-    'settings.read',
-    'GET',
-    'config',
-    empty
-  ),
-  op(
-    'settings_update',
-    'Update named system settings. Omitted keys are unchanged; masked secret placeholders are preserved.',
-    'settings.write',
-    'POST',
-    'config',
-    strings
-  ),
-  op(
-    'custom_settings_get',
-    'Read custom settings with secret-like values masked.',
-    'settings.read',
-    'GET',
-    'config/custom',
-    empty
-  ),
-  op(
-    'custom_settings_replace',
-    'Replace ALL custom settings. Omitted custom keys are deleted; read the current set first.',
-    'settings.write',
-    'POST',
-    'config/custom',
-    z
-      .object({
-        configs: z
-          .array(z.object({ key: z.string().max(191), value: text }).strict())
-          .max(500),
-      })
-      .strict()
-  ),
-  op(
-    'settings_test',
-    'Test a provider configuration; may send a real email or bot notification. Only call when that test is requested.',
-    'settings.write',
-    'POST',
-    'settings/test',
-    z
-      .object({
-        group: id,
-        inputs: strings.optional(),
-        configs: strings.optional(),
-      })
-      .strict()
-  ),
 ];
 
 export const adminScopes = [

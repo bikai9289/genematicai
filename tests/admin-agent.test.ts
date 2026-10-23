@@ -784,20 +784,16 @@ test('post create/read/update/delete works through the common REST boundary', as
     200
   );
 });
-test('configuration secrets are masked and audit never exposes payloads or raw credentials', async () => {
+test('configuration operations are retired and audit never exposes payloads or raw credentials', async () => {
   const secret = 'test-only-secret-value';
-  assert.equal(
-    (
-      await request(
-        'settings_update',
-        { stripe_secret_key: secret },
-        fullToken,
-        'settings-test-key'
-      )
-    ).status,
-    200
-  );
-  const body = await (await request('settings_get', {})).text();
+  assert.throws(() => findOperation('settings_update'), /Unknown operation/);
+  const response = await runAdminRoute('settings_get', {
+    request: new Request(`${baseUrl}/api/admin/config`, {
+      headers: { Authorization: `Bearer ${fullToken}` },
+    }),
+  });
+  assert.equal(response.status, 404);
+  const body = await response.text();
   assert(!body.includes(secret));
   const { items: audit, total } = await access.listExecutions({
     userId: fullAgentId,

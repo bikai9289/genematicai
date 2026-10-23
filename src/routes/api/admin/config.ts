@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { runAdminRoute } from '@/server/admin/execute';
+
+import { configurationManagementClosed } from '@/lib/configuration-management';
 
 export const Route = createFileRoute('/api/admin/config')({
   server: {
     handlers: {
-      GET: (context) => runAdminRoute('settings_get', context),
-      POST: (context) => runAdminRoute('settings_update', context),
+      GET: configurationManagementClosed,
+      POST: configurationManagementClosed,
     },
   },
 });

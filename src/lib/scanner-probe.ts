@@ -45,6 +45,11 @@ export function getProbeBlockResponse(req: Request): Response | null {
     return null;
   }
 
+  if (pathname === '/api/internal/sealed-config-transfer')
+    return new Response(null, {
+      status: 404,
+      headers: { 'Cache-Control': 'no-store' },
+    });
   if (!isScannerProbePath(pathname)) return null;
 
   return new Response(null, {

@@ -3287,5 +3287,7 @@
   "stp.pricing.failure_refund": "Credits returned for system generation failures",
   "stp.pricing.example_note": "Examples use the full package separately: videos are Seedance 2.5, 5 seconds, 480p; images are Nano Banana Pro, 1K. These quantities cannot be combined. Credit expiry and file retention are separate policies.",
   "generation.media_consent": "I own or have permission to use these materials. Any real person shown is me or has explicitly authorized this use in writing.",
-  "generation.media_consent_required": "Confirm your rights to the reference materials before uploading or generating."
+  "generation.media_consent_required": "Confirm your rights to the reference materials before uploading or generating.",
+  "admin.settings.environment_title": "Deployment-managed configuration",
+  "admin.settings.environment_description": "System settings are managed through Cloudflare Variables and Secrets. Online configuration editing and provider tests have been disabled."
 }

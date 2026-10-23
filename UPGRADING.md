@@ -1,5 +1,13 @@
 # Upgrading an existing project
 
+## 2026-10-23 Environment-only system configuration
+
+- Migrate all active DB settings to deployment Variables/Secrets before deploying this change. Original setting names map to uppercase env names; app public values retain VITE\_ names. Run `pnpm exec tsx scripts/config-env-map.ts` for the complete name map (no values printed).
+- `getAllConfigs()` reads Worker bindings first, process env second, then existing defaults. D1 config rows are ignored, not deleted. Retain an existing encryption key only while encrypted rollback backups are needed.
+- Online config GET/POST, custom config and settings tests now return 410; corresponding Agent/MCP operations are removed. The old settings page contains only a retirement notice and is removed from navigation. Other admin functions remain available.
+- Keep runtime-only deployment settings out of wrangler vars when Dashboard changes should survive deployments; keep*vars is enabled. Public VITE* values require a rebuild and must never contain private credentials.
+- Use CUSTOM_CONFIG_JSON only for custom string keys; it cannot override predefined infrastructure settings. See `docs/operations/environment-configuration.md` for the migrated services and validation limits.
+
 ## 2026-10-23 Launch copy and reference consent
 
 - Reference-image generation now requires `options.media_consent: true`, including first/last-frame references. API clients must collect an explicit rights declaration. Missing declarations return `MEDIA_CONSENT_REQUIRED` before new credits are consumed. This records a declaration; it does not verify ownership or replace safety screening.

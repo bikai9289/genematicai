@@ -3286,5 +3286,7 @@
   "stp.pricing.failure_refund": "系统生成失败退还积分",
   "stp.pricing.example_note": "示例分别使用全部套餐积分：视频为 Seedance 2.5、5 秒、480p；图片为 Nano Banana Pro、1K。两种数量不能叠加。积分有效期与文件保存期限分别计算。",
   "generation.media_consent": "我拥有这些素材的使用权或已获授权。其中的真人肖像为我本人，或已获得该人对此用途的明确书面授权。",
-  "generation.media_consent_required": "上传或生成前，请先确认参考素材的使用授权。"
+  "generation.media_consent_required": "上传或生成前，请先确认参考素材的使用授权。",
+  "admin.settings.environment_title": "配置由部署环境管理",
+  "admin.settings.environment_description": "系统配置已改由 Cloudflare Variables 和 Secrets 管理，网站中的配置编辑与供应商测试入口已停用。"
 }

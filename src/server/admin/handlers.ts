@@ -2,8 +2,6 @@ import * as analytics_funnel from './handlers/analytics-funnel';
 import * as analytics_overview from './handlers/analytics-overview';
 import * as analytics_report from './handlers/analytics-report';
 import * as categories from './handlers/categories';
-import * as config from './handlers/config';
-import * as config_custom from './handlers/config-custom';
 import * as credits from './handlers/credits';
 import * as invite_codes from './handlers/invite-codes';
 import * as orders from './handlers/orders';
@@ -13,7 +11,6 @@ import * as posts from './handlers/posts';
 import * as roles_assign from './handlers/roles-assign';
 import * as roles_index from './handlers/roles-index';
 import * as roles_permissions from './handlers/roles-permissions';
-import * as settings_test from './handlers/settings-test';
 import * as subscriptions from './handlers/subscriptions';
 import * as tickets from './handlers/tickets';
 import * as tickets_id from './handlers/tickets-id';
@@ -70,9 +67,4 @@ export const handlers: Record<
   tickets_get: tickets_id.GET,
   tickets_reply: tickets_id.POST,
   tickets_update: tickets_id.PATCH,
-  settings_get: config.GET,
-  settings_update: config.POST,
-  custom_settings_get: config_custom.GET,
-  custom_settings_replace: config_custom.POST,
-  settings_test: settings_test.POST,
 };

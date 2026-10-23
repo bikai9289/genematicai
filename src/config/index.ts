@@ -76,9 +76,8 @@ export const envConfigs: Record<string, string> = {
   inline_image_max_kb: procEnv.INLINE_IMAGE_MAX_KB ?? '5120',
 
   // AI
-  // OpenAI / Anthropic are admin-panel-only (like Gemini/Fal). No env fallback:
-  // OPENAI_API_KEY / ANTHROPIC_API_KEY are common ambient vars, and falling back
-  // to them would let the admin "Test" silently pass on the machine's own key.
+  // Additional provider settings are resolved from the deployment environment
+  // by modules/config/environment.ts; they are never exposed wholesale to clients.
   replicate_api_token: procEnv.REPLICATE_API_TOKEN ?? '',
 
   // Locale (public)

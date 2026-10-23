@@ -40,6 +40,10 @@ if (!process.argv.includes('--build-only')) {
   run([
     'node_modules/wrangler/bin/wrangler.js',
     'deploy',
-    ...(revision ? ['--message', `Release ${revision}`] : []),
+    ...(process.env.DEPLOY_MESSAGE
+      ? ['--message', process.env.DEPLOY_MESSAGE]
+      : revision
+        ? ['--message', `Release ${revision}`]
+        : []),
   ]);
 }

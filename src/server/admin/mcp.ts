@@ -49,11 +49,9 @@ export async function handleAdminMcp(request: Request) {
                 readOnlyHint: operation.readOnly,
                 destructiveHint: !operation.readOnly,
                 idempotentHint: true,
-                openWorldHint: [
-                  'settings_test',
-                  'tickets_reply',
-                  'orders_refund',
-                ].includes(operation.name),
+                openWorldHint: ['tickets_reply', 'orders_refund'].includes(
+                  operation.name
+                ),
               },
             },
             async ({ input, idempotencyKey }) => {
