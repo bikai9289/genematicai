@@ -36,8 +36,8 @@ export function Footer() {
           href: '/prompts',
         },
         {
-          label: 'Showcases',
-          href: '/showcases',
+          label: m['genematic.dance.heading'](),
+          href: '/ai-dance-video-generator',
         },
       ],
     },

@@ -6,6 +6,8 @@ import { DownloadButton } from '@/components/download-button';
 import { Button, buttonVariants } from '@/components/ui/button';
 
 export interface VideoGeneratorPreviewProps {
+  title?: string;
+  description?: string;
   isGenerating: boolean;
   progressText: string;
   generatedVideoUrl: string | null;
@@ -15,6 +17,8 @@ export interface VideoGeneratorPreviewProps {
 }
 
 export function VideoGeneratorPreview({
+  title,
+  description,
   isGenerating,
   progressText,
   generatedVideoUrl,
@@ -24,13 +28,11 @@ export function VideoGeneratorPreview({
 }: VideoGeneratorPreviewProps) {
   return (
     <div className="bg-card border-border/80 relative flex min-h-[440px] flex-col justify-between overflow-hidden rounded-3xl border p-6 shadow-xl backdrop-blur-3xl sm:p-7 lg:min-h-[560px] dark:border-zinc-800/60 dark:bg-zinc-900/40">
-      <div className="pointer-events-none absolute top-0 right-0 h-64 w-64 rounded-full bg-purple-500/5 blur-[100px]" />
-
-      <div className="text-foreground relative z-10 mb-4 flex items-center font-serif text-xl font-extrabold">
+      <div className="text-foreground relative z-10 mb-4 flex items-center font-sans text-xl font-semibold">
         <div className="bg-muted mr-3 rounded-xl p-2 shadow-inner">
           <Video className="text-muted-foreground h-5 w-5" />
         </div>
-        <span>{m['app.generator.video_title']()}</span>
+        <span>{title ?? m['app.generator.video_title']()}</span>
       </div>
 
       <div className="relative z-10 my-auto flex flex-1 flex-col items-center justify-center">
@@ -130,14 +132,14 @@ export function VideoGeneratorPreview({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-6 text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-purple-500/10 shadow-inner">
-              <Video className="size-8 text-purple-600 opacity-70 dark:text-purple-400" />
+            <div className="bg-primary/10 flex size-16 items-center justify-center rounded-md shadow-inner">
+              <Video className="text-primary size-8 opacity-70" />
             </div>
             <h3 className="text-foreground mt-4 text-base font-bold sm:text-lg">
-              {m['app.generator.video_title']()}
+              {title ?? m['app.generator.video_title']()}
             </h3>
             <p className="text-muted-foreground mt-1.5 max-w-sm text-xs sm:text-sm">
-              {m['app.generator.video_subtitle']()}
+              {description ?? m['app.generator.video_subtitle']()}
             </p>
           </div>
         )}

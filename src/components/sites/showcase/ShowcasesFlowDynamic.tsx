@@ -88,6 +88,7 @@ interface ShowcasesFlowDynamicProps {
   initialItems?: ShowcaseItem[];
   usePrompts?: boolean;
   type?: string;
+  hideWhenEmpty?: boolean;
 }
 
 function getShowcaseModelName(item: ShowcaseItem): string | null {
@@ -372,6 +373,7 @@ export function ShowcasesFlowDynamic({
   initialItems,
   usePrompts = false,
   type,
+  hideWhenEmpty = false,
 }: ShowcasesFlowDynamicProps) {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
@@ -455,6 +457,10 @@ export function ShowcasesFlowDynamic({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedIndex, handlePrevious, handleNext]);
+
+  if (hideWhenEmpty && (loading || items.length === 0)) {
+    return null;
+  }
 
   return (
     <section id={id} className={cn('relative py-12 md:py-16', className)}>

@@ -14,7 +14,6 @@ import { FaqCta } from '@/components/sites/root/FaqCta';
 import { Hero } from '@/components/sites/root/Hero';
 import { IntroduceBenefits } from '@/components/sites/root/IntroduceBenefits';
 import { Logos } from '@/components/sites/root/Logos';
-import { ShowcaseSection } from '@/components/sites/root/ShowcaseSection';
 import { StatsTestimonials } from '@/components/sites/root/StatsTestimonials';
 import { UsageSteps } from '@/components/sites/root/UsageSteps';
 import { ShowcasesFlowDynamic } from '@/components/sites/showcase/ShowcasesFlowDynamic';
@@ -34,6 +33,7 @@ function HomePage() {
 
         {/* 2. Trending AI Showcases Flow */}
         <ShowcasesFlowDynamic
+          hideWhenEmpty
           title={m['app.generator.trending_title']()}
           description={m['app.generator.trending_subtitle']()}
         />
@@ -42,7 +42,6 @@ function HomePage() {
         <Logos />
 
         {/* 4. Interactive Image to Video Comparison Showcase */}
-        <ShowcaseSection />
 
         {/* 5. Core Platform Features */}
         <CoreFeatures />
@@ -57,7 +56,7 @@ function HomePage() {
         <StatsTestimonials />
 
         {/* 9. Transparent Pricing Plans */}
-        <Pricing />
+        <Pricing heading="h2" />
 
         {/* 10. FAQ & Conversion CTA */}
         <FaqCta />
@@ -120,6 +119,11 @@ export const Route = createFileRoute('/')({
         },
       ],
       links: [
+        {
+          rel: 'preload',
+          as: 'image',
+          href: '/oss/display/home/text-to-video-ai-cover.webp',
+        },
         { rel: 'canonical', href: urlFor(locale) },
         ...locales.map((loc) => ({
           rel: 'alternate',

@@ -14,7 +14,6 @@ import {
 import { useSession } from '@/core/auth/client';
 import { Link, usePathname } from '@/core/i18n/navigation';
 import { m } from '@/paraglide/messages.js';
-import { useAppName } from '@/hooks/use-public-config';
 import { LocaleSelector } from '@/components/locale-selector';
 import { SiteUserMenu } from '@/components/site-user-menu';
 import { Logo } from '@/components/sites/root/Logo';
@@ -59,8 +58,6 @@ export function Header() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  const appName = useAppName() || 'Genematic AI';
-
   return (
     <header
       suppressHydrationWarning
@@ -77,9 +74,10 @@ export function Header() {
           className="flex shrink-0 items-center gap-2.5 transition-transform hover:scale-102"
           onClick={() => setMobileMenuOpen(false)}
         >
-          <Logo className="size-7 shrink-0 rounded-lg sm:size-8" size={32} />
-          <span className="text-foreground text-sm font-extrabold tracking-tight whitespace-nowrap sm:text-lg md:text-xl">
-            {appName}
+          <Logo className="size-7 shrink-0 sm:size-8" />
+          <span className="text-foreground text-[1.0625rem] font-semibold tracking-[-0.02em] whitespace-nowrap">
+            Genematic
+            <span className="text-muted-foreground ml-1 font-normal">AI</span>
           </span>
         </Link>
 
@@ -297,9 +295,13 @@ export function Header() {
           <div className="hidden items-center gap-1.5 sm:gap-3 lg:flex">
             <LocaleSelector />
             <ThemeToggle />
-            {!mounted ? (
-              <div className="h-8 w-20" />
-            ) : user ? (
+            <Link
+              href="/ai-video-generator"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm"
+            >
+              {mounted ? m['landing.nav.start_free']() : 'Start Free'}
+            </Link>
+            {user ? (
               <SiteUserMenu
                 name={user.name || 'User'}
                 email={user.email}
@@ -308,7 +310,7 @@ export function Header() {
             ) : (
               <Link
                 href={signInHref}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all hover:scale-102"
+                className="text-foreground/80 hover:text-foreground px-3 py-2 text-xs font-semibold"
               >
                 {m['stp.nav.sign_in']()}
               </Link>
@@ -439,23 +441,30 @@ export function Header() {
                 <LocaleSelector />
                 <ThemeToggle />
               </div>
-              {!mounted ? (
-                <div className="h-8 w-20" />
-              ) : user ? (
-                <SiteUserMenu
-                  name={user.name || 'User'}
-                  email={user.email}
-                  image={user.image}
-                />
-              ) : (
+              <div className="flex items-center gap-2">
                 <Link
-                  href={signInHref}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+                  href="/ai-video-generator"
+                  className="bg-primary text-primary-foreground inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-xs font-semibold"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {m['stp.nav.sign_in']()}
+                  {mounted ? m['landing.nav.start_free']() : 'Start Free'}
                 </Link>
-              )}
+                {user ? (
+                  <SiteUserMenu
+                    name={user.name || 'User'}
+                    email={user.email}
+                    image={user.image}
+                  />
+                ) : (
+                  <Link
+                    href={signInHref}
+                    className="text-foreground/80 px-3 py-2 text-xs font-semibold"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {m['stp.nav.sign_in']()}
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>

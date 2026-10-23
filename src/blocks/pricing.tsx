@@ -62,7 +62,11 @@ interface PricingPlan {
   };
 }
 
-export function Pricing() {
+export function Pricing({
+  heading: HeadingTag = 'h1',
+}: {
+  heading?: 'h1' | 'h2';
+}) {
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -296,9 +300,9 @@ export function Pricing() {
             <span>{m['stp.pricing.zero_sub_pill']()}</span>
           </div>
 
-          <h1 className="text-foreground text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+          <HeadingTag className="text-foreground text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
             {m['landing.pricing.title']()}
-          </h1>
+          </HeadingTag>
 
           <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-sm leading-relaxed sm:text-base lg:text-lg">
             {m['stp.pricing.banner_subtitle']()}

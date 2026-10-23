@@ -54,7 +54,7 @@ export const Route = createFileRoute('/posts/$slug')({
         name: appName,
         logo: {
           '@type': 'ImageObject',
-          url: `${appUrl}/logo.svg`,
+          url: `${appUrl}/logo.png?v=3`,
         },
       },
       mainEntityOfPage: {

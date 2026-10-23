@@ -4,6 +4,11 @@ import { envConfigs } from '@/config';
 
 const PAGES = [
   [
+    'AI dance video generator',
+    '/ai-dance-video-generator',
+    'Create dance-inspired clips from prompts or photos; reference-video choreography transfer is not supported.',
+  ],
+  [
     'Genematic AI home',
     '/',
     'Create cinematic videos and images from text, photos, and creative ideas.',

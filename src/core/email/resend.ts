@@ -15,6 +15,7 @@ import type {
 export interface ResendConfigs extends EmailConfigs {
   apiKey: string;
   defaultFrom?: string;
+  defaultReplyTo?: string;
 }
 
 /**
@@ -54,8 +55,8 @@ export class ResendProvider implements EmailProvider {
       if (email.html) {
         resendEmail.html = email.html;
       }
-      if (email.replyTo) {
-        resendEmail.replyTo = email.replyTo;
+      if (email.replyTo || this.configs.defaultReplyTo) {
+        resendEmail.replyTo = email.replyTo || this.configs.defaultReplyTo;
       }
       if (email.attachments) {
         resendEmail.attachments = email.attachments.map((att) => ({

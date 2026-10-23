@@ -5,6 +5,10 @@
   "name": "genematicai",
   "workers_dev": true,
   "keep_vars": true,
+  "routes": [
+    { "pattern": "genematicai.com", "custom_domain": true },
+    { "pattern": "www.genematicai.com", "custom_domain": true }
+  ],
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {

@@ -103,6 +103,7 @@ async function testResend(
   const provider = new ResendProvider({
     apiKey: configs.resend_api_key,
     defaultFrom: configs.resend_sender_email,
+    defaultReplyTo: configs.resend_reply_to,
   });
 
   const result = await provider.sendEmail({

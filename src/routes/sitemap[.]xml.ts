@@ -9,6 +9,7 @@ const STATIC_PATHS = [
   '',
   '/pricing',
   '/ai-video-generator',
+  '/ai-dance-video-generator',
   '/ai-image-generator',
   '/video-face-swap',
   '/posts',

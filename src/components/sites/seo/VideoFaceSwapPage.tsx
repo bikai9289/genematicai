@@ -111,7 +111,7 @@ export function VideoFaceSwapPage() {
             </div>
             <div className="mt-8 flex flex-wrap gap-4 text-sm">
               <Link
-                href="/ai-image-generator"
+                href="/ai-video-generator"
                 className="text-primary inline-flex items-center gap-1 hover:underline"
               >
                 {m['genematic.face_swap.photo_tool_link']()}{' '}

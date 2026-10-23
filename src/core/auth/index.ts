@@ -132,7 +132,14 @@ function getEmailProvider(
   const apiKey = configs.resend_api_key;
   const from = configs.resend_sender_email;
   if (!apiKey || !from) return null;
-  return { provider: new ResendProvider({ apiKey, defaultFrom: from }), from };
+  return {
+    provider: new ResendProvider({
+      apiKey,
+      defaultFrom: from,
+      defaultReplyTo: configs.resend_reply_to,
+    }),
+    from,
+  };
 }
 
 /** Check whether email sending is available for the selected provider */

@@ -12,6 +12,7 @@ import {
   applySecurityHeaders,
   getProbeBlockResponse,
 } from './lib/scanner-probe';
+import { canonicalRedirect } from './lib/site-redirect';
 import { paraglideMiddleware } from './paraglide/server.js';
 
 // On Cloudflare Workers, stash the binding env (D1, ASSETS, …) on globalThis
@@ -80,6 +81,8 @@ function appHost(): string {
 // so getLocale() resolves per-request (AsyncLocalStorage) during SSR.
 export default {
   async fetch(req: Request): Promise<Response> {
+    const redirect = canonicalRedirect(req.url, envConfigs.app_url);
+    if (redirect) return Response.redirect(redirect, 301);
     const blocked = getProbeBlockResponse(req);
     if (blocked) return blocked;
     await ensureCloudflareEnv();

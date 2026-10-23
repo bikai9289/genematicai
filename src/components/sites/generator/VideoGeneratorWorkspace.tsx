@@ -33,6 +33,8 @@ const isImageReferenceUrl = (value: unknown): value is string =>
   !/\.(mp4|webm|mov|m4v)(?:$|[?#])/i.test(value.trim());
 
 export interface VideoGeneratorWorkspaceProps {
+  previewTitle?: string;
+  previewDescription?: string;
   search?: {
     prompt?: string;
     model?: string;
@@ -42,6 +44,8 @@ export interface VideoGeneratorWorkspaceProps {
 
 export function VideoGeneratorWorkspace({
   search,
+  previewTitle,
+  previewDescription,
 }: VideoGeneratorWorkspaceProps) {
   const navigate = useNavigate();
   const { data: session } = useSession();
@@ -694,6 +698,8 @@ export function VideoGeneratorWorkspace({
       />
 
       <VideoGeneratorPreview
+        title={previewTitle}
+        description={previewDescription}
         isGenerating={isGenerating}
         progressText={progressText}
         generatedVideoUrl={generatedVideoUrl}

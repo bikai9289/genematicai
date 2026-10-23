@@ -37,17 +37,13 @@ function AIVideoGeneratorPage() {
           <VideoGeneratorWorkspace search={search} />
 
           {/* Inspiration Gallery Section */}
-          <div className="border-border/60 mt-14 border-t pt-12 sm:mt-20 sm:pt-16">
-            <div className="mb-6 text-center sm:mb-8">
-              <h2 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">
-                {m['app.generator.showcases_title']()}
-              </h2>
-              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                {m['app.generator.showcases_subtitle']()}
-              </p>
-            </div>
-            <ShowcasesFlowDynamic type="video" hideCreateButton={false} />
-          </div>
+          <ShowcasesFlowDynamic
+            type="video"
+            hideWhenEmpty
+            hideCreateButton={false}
+            title={m['app.generator.showcases_title']()}
+            description={m['app.generator.showcases_subtitle']()}
+          />
         </div>
       </main>
 

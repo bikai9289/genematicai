@@ -32,9 +32,7 @@ import { TopBanner } from '@/components/top-banner';
 import { Toaster } from '@/components/ui/sonner';
 
 import '@fontsource-variable/inter';
-import '@fontsource/libre-baskerville/400.css';
-import '@fontsource/libre-baskerville/700.css';
-import '@fontsource/libre-baskerville/400-italic.css';
+import '@fontsource-variable/space-grotesk';
 import '@/styles/globals.css';
 
 const authMiddleware = createMiddleware({ type: 'request' }).server(
@@ -178,7 +176,7 @@ export const Route = createRootRoute({
           '@id': `${appUrl}/#organization`,
           name: appName,
           url: appUrl,
-          logo: `${appUrl}/logo.svg`,
+          logo: `${appUrl}/logo.png?v=3`,
           sameAs: [],
         },
         {
@@ -202,8 +200,7 @@ export const Route = createRootRoute({
         { charSet: 'utf-8' },
         {
           name: 'viewport',
-          content:
-            'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+          content: 'width=device-width, initial-scale=1',
         },
         { title: appName },
         { name: 'description', content: appDescription },
@@ -230,16 +227,17 @@ export const Route = createRootRoute({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: appName },
         { property: 'og:description', content: appDescription },
-        { property: 'og:image', content: `${appUrl}/logo.png` },
+        { property: 'og:image', content: `${appUrl}/logo.png?v=3` },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: appName },
         { name: 'twitter:description', content: appDescription },
-        { name: 'twitter:image', content: `${appUrl}/logo.png` },
+        { name: 'twitter:image', content: `${appUrl}/logo.png?v=3` },
       ],
       links: [
-        { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' },
-        { rel: 'shortcut icon', href: '/favicon.ico', type: 'image/x-icon' },
-        { rel: 'apple-touch-icon', href: '/logo.png' },
+        { rel: 'icon', href: '/favicon.ico?v=3', sizes: '32x32' },
+        { rel: 'icon', href: '/favicon.svg?v=3', type: 'image/svg+xml' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png?v=3' },
+        { rel: 'manifest', href: '/site.webmanifest' },
       ],
       scripts: [
         {
@@ -267,8 +265,8 @@ function RootComponent() {
       <SessionProvider initialSession={analytics?.session || null}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <ScrollRestoration />

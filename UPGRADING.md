@@ -13,6 +13,20 @@
 - Seedance 2.5 now forwards first/last frame images. KIE Kling and Wan 2.7 offer only 720p/1080p; unsupported video resolutions are rejected before billing instead of silently upgraded.
 - The admin KIE test uses Nano Banana Pro and respects the configured base URL. A submitted task still requires completion checking.
 
+## 2026-10-22 Public controls and dance page follow-up
+
+- Locale selectors now render crawlable native links before hydration, preserving the current path and query. Theme toggles no longer render a disabled placeholder.
+- Replace the empty footer showcase link with the dance workspace, remove the remaining unverified generation-time promise, and remove legacy preview/footer styling.
+- Dance pages now include localized steps, six FAQs, matching FAQ structured data, Twitter metadata, hreflang, and a page-specific preview title. Both LLM index files include the new route.
+
+## 2026-10-22 Production domain and email verification
+
+- Rebuild with `VITE_APP_URL=https://genematicai.com` and `AUTH_URL=https://genematicai.com`; runtime-only changes cannot update client metadata.
+- Bind both the root and www domains. Public pages on www and the legacy Worker hostname redirect permanently to the root domain; API endpoints retain their original host.
+- Auth now loads merged environment and database configuration. Enable `email_verification_enabled` only with a working mail provider; new password accounts must verify before signing in.
+- Set `RESEND_REPLY_TO=support@genematicai.com` for authentication and test email replies.
+- Remove unverified render-time claims and the template comparison; add a dance prompt workspace without claiming choreography transfer.
+
 Read this when a project built from this template pulls newer template code.
 Entries are newest first. Apply **every entry dated after the template version
 the project last pulled**, oldest of those first.

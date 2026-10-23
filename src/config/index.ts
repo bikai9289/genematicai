@@ -62,6 +62,7 @@ export const envConfigs: Record<string, string> = {
 
   // Email - Resend
   resend_api_key: procEnv.RESEND_API_KEY ?? '',
+  resend_reply_to: procEnv.RESEND_REPLY_TO ?? '',
   resend_sender_email:
     procEnv.RESEND_SENDER_EMAIL ?? procEnv.RESEND_EMAIL_FROM ?? '',
 

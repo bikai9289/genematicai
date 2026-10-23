@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import { useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, Globe, Languages } from 'lucide-react';
 
 import { localeNames } from '@/config/locale';
 import { cn } from '@/lib/utils';
-import { getLocale, locales, setLocale } from '@/paraglide/runtime.js';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  getLocale,
+  locales,
+  localizeHref,
+  setLocale,
+} from '@/paraglide/runtime.js';
 
 export function LocaleSelector({
   variant = 'icon',
@@ -18,83 +17,54 @@ export function LocaleSelector({
   variant?: 'icon' | 'pill';
   className?: string;
 }) {
-  const [mounted, setMounted] = useState(false);
   const locale = getLocale();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  function handleSwitch(newLocale: string) {
-    // Writes the locale cookie and reloads on the localized current URL.
-    setLocale(newLocale as typeof locale);
-  }
-
-  if (!mounted) {
-    return (
-      <button
-        type="button"
-        disabled
-        className={cn(
-          'inline-flex items-center transition-colors outline-none',
-          variant === 'icon'
-            ? 'text-muted-foreground size-8 justify-center rounded-md'
-            : 'h-9 gap-2 rounded-full border px-4 text-sm',
-          className
-        )}
-      >
-        {variant === 'icon' ? (
-          <>
-            <Languages className="size-4" />
-            <span className="sr-only">Switch language</span>
-          </>
-        ) : (
-          <>
-            <Globe className="size-4" />
-            <span>{localeNames[locale] || locale}</span>
-            <ChevronDown className="size-4 opacity-70" />
-          </>
-        )}
-      </button>
-    );
-  }
-
+  const location = useLocation();
+  const href =
+    location.pathname +
+    location.searchStr +
+    (location.hash ? `#${location.hash}` : '');
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
+    <details className="group relative">
+      <summary
+        aria-label="Switch language"
+        title="Switch language"
         className={cn(
-          'inline-flex items-center transition-colors outline-none',
+          'inline-flex cursor-pointer list-none items-center outline-none [&::-webkit-details-marker]:hidden',
           variant === 'icon'
-            ? 'text-muted-foreground hover:bg-accent hover:text-accent-foreground size-8 justify-center rounded-md'
-            : 'h-9 gap-2 rounded-full border px-4 text-sm',
+            ? 'text-muted-foreground hover:bg-accent size-9 justify-center rounded-md'
+            : 'h-10 gap-2 rounded-md border px-4 text-sm',
           className
         )}
       >
         {variant === 'icon' ? (
-          <>
-            <Languages className="size-4" />
-            <span className="sr-only">Switch language</span>
-          </>
+          <Languages className="size-4" />
         ) : (
           <>
             <Globe className="size-4" />
             <span>{localeNames[locale] || locale}</span>
-            <ChevronDown className="size-4 opacity-70" />
+            <ChevronDown className="size-4" />
           </>
         )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      </summary>
+      <nav
+        aria-label="Languages"
+        className="bg-popover text-popover-foreground border-border absolute right-0 z-50 mt-2 min-w-32 rounded-md border p-1 shadow-md"
+      >
         {locales.map((loc) => (
-          <DropdownMenuItem
+          <a
             key={loc}
-            onClick={() => handleSwitch(loc)}
-            className="flex items-center justify-between gap-2"
+            href={localizeHref(href, { locale: loc })}
+            hrefLang={loc}
+            lang={loc}
+            aria-current={locale === loc ? 'true' : undefined}
+            onClick={() => setLocale(loc, { reload: false })}
+            className="hover:bg-accent flex min-h-10 items-center justify-between gap-4 rounded px-3 py-2 text-sm"
           >
             {localeNames[loc] || loc}
             {loc === locale && <Check className="size-3.5" />}
-          </DropdownMenuItem>
+          </a>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </nav>
+    </details>
   );
 }

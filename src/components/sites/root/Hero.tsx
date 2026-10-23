@@ -1,66 +1,133 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Sparkles, Video } from 'lucide-react';
+import { ArrowRight, Play, Sparkles } from 'lucide-react';
 
 import { Link } from '@/core/i18n/navigation';
+import { cn } from '@/lib/utils';
 import { m } from '@/paraglide/messages.js';
+import { VideoWall, type WallClip } from '@/components/sites/root/video-wall';
+import { buttonVariants } from '@/components/ui/button';
+
+const clip = (src: string, poster: string): WallClip => ({ src, poster });
+
+const product = clip(
+  '/oss/display/home/text-to-video-ai.mp4',
+  '/oss/display/home/text-to-video-ai-cover.webp'
+);
+const stillA = clip(
+  '/oss/display/home/text-to-video-ai.mp4',
+  '/imgs/blocks/block-video.jpg'
+);
+const stillB = clip(
+  '/oss/display/home/text-to-video-ai.mp4',
+  '/imgs/blocks/block-img.jpg'
+);
+const stillC = clip(
+  '/oss/display/home/text-to-video-ai.mp4',
+  '/oss/display/home/image-to-image-ai-2.webp'
+);
+
+const COLUMNS = [
+  {
+    dir: 'up' as const,
+    duration: '54s',
+    clips: [product, stillA, stillB, stillC],
+  },
+  {
+    dir: 'down' as const,
+    duration: '68s',
+    clips: [stillA, product, stillC, stillB],
+  },
+  {
+    dir: 'up' as const,
+    duration: '60s',
+    clips: [stillB, stillC, product, stillA],
+  },
+  {
+    dir: 'down' as const,
+    duration: '74s',
+    clips: [stillC, stillB, stillA, product],
+  },
+];
 
 export function Hero() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <section
       id="hero"
-      className="relative flex h-screen min-h-[640px] items-center justify-center overflow-hidden pt-16 pb-8 md:pt-20"
+      className="relative flex min-h-[88vh] items-center justify-center overflow-hidden pt-24 pb-20"
     >
-      {/* Background Image with feathered/blurred perimeter (四周发虚) */}
-      <div className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden select-none">
-        <img
-          src="/imgs/bg/girl.jpeg"
-          alt="hero background"
-          className="h-full w-full [mask-image:radial-gradient(ellipse_90%_80%_at_50%_50%,#000_40%,transparent_100%)] object-cover object-center opacity-75 [-webkit-mask-image:radial-gradient(ellipse_90%_80%_at_50%_50%,#000_40%,transparent_100%)] dark:opacity-50"
-        />
-        {/* Soft edge blur and fade overlays */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--background)_92%)]" />
-        <div className="from-background/50 to-background absolute inset-0 bg-gradient-to-b via-transparent" />
-        <div className="from-background/40 to-background/40 absolute inset-0 bg-gradient-to-r via-transparent" />
-      </div>
+      <VideoWall columns={COLUMNS} />
 
-      <div className="relative z-10 container mx-auto max-w-5xl px-4 text-center sm:px-6">
-        {/* Main Headline */}
-        <h1 className="text-foreground mx-auto mb-6 max-w-4xl font-serif text-4xl leading-[1.15] font-bold tracking-tight sm:text-6xl lg:text-7xl">
-          <span className="text-primary font-bold">Photo to Video AI</span>{' '}
-          {m['genematic.home.hero_suffix']()}
+      <div className="relative z-10 container mx-auto max-w-4xl px-4 text-center sm:px-6">
+        <div className="border-border/70 bg-card/60 mb-7 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 backdrop-blur-md">
+          <Sparkles className="text-primary size-3.5" aria-hidden="true" />
+          <span className="text-foreground/90 text-xs font-semibold tracking-wide">
+            Genematic AI
+          </span>
+          <span className="bg-border h-3 w-px" />
+          <span className="text-muted-foreground text-xs font-medium">
+            {m['genematic.home.eyebrow_product']()}
+          </span>
+        </div>
+
+        <h1 className="text-foreground mx-auto mb-6 max-w-3xl text-[2.6rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-6xl lg:text-[4.25rem]">
+          {m['genematic.home.hero_title_line1']()}
+          <br className="hidden sm:block" />{' '}
+          <span className="text-primary italic">
+            {m['genematic.home.hero_title_motion']()}
+          </span>
         </h1>
 
-        {/* Subtitle Description */}
-        <p className="text-muted-foreground mx-auto mb-10 max-w-2xl text-base leading-relaxed sm:text-lg md:text-xl">
+        <p className="text-muted-foreground mx-auto mb-10 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
           {m['genematic.home.hero_description']()}
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <Link
             href="/ai-video-generator"
-            className="bg-primary text-primary-foreground shadow-primary/20 inline-flex h-13 min-w-48 items-center justify-center gap-2.5 rounded-2xl px-8 text-base font-semibold shadow-lg transition-all hover:scale-105 active:scale-95"
+            className={cn(
+              buttonVariants({ size: 'lg' }),
+              'group shadow-primary/25 h-12 w-full px-7 text-[0.95rem] font-semibold shadow-lg sm:w-auto'
+            )}
           >
-            <Sparkles className="size-4.5" />
-            <span>{m['genematic.home.photo_cta']()}</span>
+            {m['genematic.home.photo_cta']()}
+            <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
-
           <Link
-            href="/video-face-swap"
-            className="border-border/80 bg-background/90 text-foreground hover:bg-muted/80 inline-flex h-13 min-w-48 items-center justify-center gap-2.5 rounded-2xl border px-8 text-base font-semibold shadow-sm backdrop-blur-md transition-all hover:scale-105 active:scale-95"
+            href="/ai-video-generator"
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'lg' }),
+              'text-foreground/80 hover:text-foreground h-12 w-full px-6 text-[0.95rem] font-medium sm:w-auto'
+            )}
           >
-            <Video className="size-4.5" />
-            <span>{m['genematic.home.face_swap_cta']()}</span>
+            <Play className="size-4" />
+            {m['genematic.home.watch_cta']()}
           </Link>
         </div>
+
+        <dl className="mx-auto mt-12 flex max-w-lg flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
+          {(
+            [
+              [
+                m['genematic.home.stat_render_value'](),
+                m['genematic.home.stat_render_label'](),
+              ],
+              [
+                m['genematic.home.stat_res_value'](),
+                m['genematic.home.stat_res_label'](),
+              ],
+              [
+                m['genematic.home.stat_aspect_value'](),
+                m['genematic.home.stat_aspect_label'](),
+              ],
+            ] as const
+          ).map(([value, label]) => (
+            <div key={label} className="flex items-baseline gap-2">
+              <dt className="text-foreground font-semibold">{value}</dt>
+              <dd className="text-muted-foreground">{label}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

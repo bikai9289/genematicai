@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { envConfigs } from '@/config';
 import { m } from '@/paraglide/messages.js';
-import { getLocale } from '@/paraglide/runtime.js';
+import { getLocale, locales, localizeUrl } from '@/paraglide/runtime.js';
 import { Footer } from '@/blocks/footer';
 import { Header } from '@/blocks/header';
 import { Pricing } from '@/blocks/pricing';
@@ -11,11 +11,27 @@ export const Route = createFileRoute('/pricing')({
   loader: () => {
     const locale = getLocale();
     return {
-      title: m['landing.pricing.title']({}, { locale }),
+      locale,
+      title: m['genematic.pricing.meta_title']({}, { locale }),
       description: m['landing.pricing.description']({}, { locale }),
     };
   },
   head: ({ loaderData }) => ({
+    links: loaderData
+      ? [
+          {
+            rel: 'canonical',
+            href: localizeUrl(`${envConfigs.app_url}/pricing`, {
+              locale: loaderData.locale,
+            }).href,
+          },
+          ...locales.map((locale) => ({
+            rel: 'alternate',
+            hrefLang: locale,
+            href: localizeUrl(`${envConfigs.app_url}/pricing`, { locale }).href,
+          })),
+        ]
+      : [],
     meta: loaderData
       ? [
           { title: loaderData.title },
@@ -25,6 +41,12 @@ export const Route = createFileRoute('/pricing')({
             content: `${envConfigs.app_name} pricing, AI credits, subscription plans, free AI generator`,
           },
           { property: 'og:type', content: 'website' },
+          {
+            property: 'og:url',
+            content: localizeUrl(`${envConfigs.app_url}/pricing`, {
+              locale: loaderData.locale,
+            }).href,
+          },
           { property: 'og:title', content: loaderData.title },
           { property: 'og:description', content: loaderData.description },
           { name: 'twitter:card', content: 'summary_large_image' },

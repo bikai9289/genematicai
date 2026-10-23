@@ -73,7 +73,7 @@ export function ShowcaseSection() {
   const currentPrompt = isZh ? currentItem.promptZh : currentItem.prompt;
 
   return (
-    <section className="bg-background relative py-20 sm:py-28">
+    <section id="showcase" className="bg-background relative py-20 sm:py-28">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mx-auto mb-14 max-w-3xl text-center">
@@ -110,6 +110,8 @@ export function ShowcaseSection() {
                 <img
                   src={currentItem.originalImage}
                   alt={currentTitle}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
@@ -188,6 +190,8 @@ export function ShowcaseSection() {
                   <img
                     src={item.originalImage}
                     alt={isZh ? item.titleZh : item.title}
+                    loading="lazy"
+                    decoding="async"
                     className="size-6 rounded-md object-cover"
                   />
                   <span>{isZh ? item.titleZh : item.title}</span>

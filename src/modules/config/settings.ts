@@ -377,7 +377,7 @@ export function getSettings(): Setting[] {
       type: 'switch',
       group: 'email_auth',
       tab: 'auth',
-      defaultValue: 'false',
+      defaultValue: 'true',
     },
     {
       name: 'invite_code_required',

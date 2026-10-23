@@ -32,6 +32,8 @@ export function Logos() {
               <img
                 src={item.src}
                 alt={item.name}
+                loading="lazy"
+                decoding="async"
                 className="size-5 shrink-0 rounded-full object-cover sm:size-5.5"
               />
               <span className="text-foreground text-xs font-semibold whitespace-nowrap sm:text-sm">
