@@ -124,16 +124,18 @@ DATABASE_URL=file:data/local.db
 # Auth
 AUTH_SECRET=generate-with-openssl-rand-base64-32
 
-# AI Providers (can also be configured via Admin Settings -> AI)
+# AI Providers (server environment / Cloudflare Secrets only)
+KIE_API_KEY=
 REPLICATE_API_TOKEN=
 
-# Storage (Optional - falls back to DB base64 if unconfigured)
-STORAGE_ENDPOINT=
-STORAGE_REGION=auto
-STORAGE_ACCESS_KEY=
-STORAGE_SECRET_KEY=
-STORAGE_BUCKET=
-STORAGE_PUBLIC_DOMAIN=
+# R2 Storage (required for media uploads)
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY=
+R2_SECRET_KEY=
+R2_BUCKET_NAME=
+R2_ENDPOINT=
+R2_DOMAIN=
+R2_UPLOAD_PATH=uploads
 
 # Payments (Optional)
 STRIPE_SECRET_KEY=

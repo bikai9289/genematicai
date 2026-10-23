@@ -80,7 +80,7 @@ src/
 │   ├── credits/service.ts       # FIFO consumption, expiration, revocation, auto-grant
 │   ├── apikeys/service.ts       # API key CRUD + validation
 │   ├── rbac/service.ts          # Role/permission checks, wildcard matching
-│   ├── config/service.ts        # DB key-value config with 1h cache
+│   ├── config/service.ts        # Deployment environment configuration; no DB fallback
 │   ├── ai-tasks/service.ts      # AI task tracking with credit deduction/revocation
 │   ├── notify/service.ts        # Bot notifications (paid orders) + client-safe templates.ts
 │   └── events/service.ts        # Product events (recordEvent) shown in the admin user timeline
@@ -524,11 +524,9 @@ money, credits, permissions, secrets, or user input:
 
 4. **Secrets**
 
-- Store secrets through `saveConfigs` (encrypted at rest) and return them
-  only masked.
-- If a setting is a URL that a saved secret gets sent to, add it to
-  `ENDPOINT_SECRETS` in `src/modules/config/service.ts`. Changing the URL
-  then requires re-entering the secret.
+- Store provider secrets in Cloudflare Secrets or server environment variables.
+  Never restore admin configuration writes, tests, or Agent/MCP settings operations.
+- Provider endpoint URLs are deployment-controlled environment variables too.
 - Never log or echo keys. Agent keys are hash-only and shown once.
 
 5. **Abuse limits**
@@ -646,19 +644,17 @@ VITE_APP_DESCRIPTION=
 VITE_APP_LOGO=
 VITE_DEFAULT_LOCALE=en
 
-# Recommended: encrypt admin-settings secrets (AES-256-GCM) in the config table.
-# Unset = plaintext storage. Once set, keep it stable — rotating or removing it
-# orphans already-encrypted values (they fall back to env values).
+# Legacy encrypted config backup only; not used by active configuration.
+# Retain the existing key while retaining the encrypted rollback backup.
 CONFIG_ENCRYPTION_KEY=
 ```
 
-**Provider credentials live in the admin panel, not env.** Payments (Stripe/
-Creem/PayPal/Alipay/WeChat), OAuth (Google/GitHub/One-Tap), email (Resend),
-storage (R2), AI (Replicate/Gemini/Fal), and analytics are configured at
-`/admin/settings` and stored in the `config` table (encrypted when
-`CONFIG_ENCRYPTION_KEY` is set). Resolution is `{ ...envConfigs, ...dbConfigs }`
-— same-named env vars still work as fallbacks, but database values win.
-Keep `.env.example` minimal; don't add provider keys to it.
+**System configuration is environment-only.** Provider credentials belong in
+Cloudflare Secrets; ordinary settings belong in deployment environment variables.
+Runtime configuration ignores the legacy `config` table. Retired admin settings
+APIs return 410. Keep `.env.example` synchronized with supported variables.
+See `docs/operations/environment-configuration.md` and run
+`pnpm exec tsx scripts/config-env-map.ts` for the complete key mapping.
 
 ## Critical Rules
 
@@ -692,8 +688,8 @@ domain: `https://<port>-<sandboxId>.e2b.app`.
 - The database ships pre-initialized (RBAC + a default admin account:
   **[admin@shipany.site](mailto:admin@shipany.site) / admin1234**). After starting the dev server, always
   tell the user they can open the admin console at `<preview-url>/admin`
-  (sign in at `<preview-url>/sign-in` with those credentials) to configure
-  payments, login providers, email, storage, and AI in Settings.
+  (sign in at `<preview-url>/sign-in` with those credentials) to manage users
+  and business records. Configure providers through deployment environment variables.
 - Browser automation is preinstalled: Playwright with Chromium
   (`playwright` CLI on PATH, browsers at `$PLAYWRIGHT_BROWSERS_PATH`). The
   clone-website skill's extraction phase should use it via Node scripts or
