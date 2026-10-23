@@ -58,7 +58,7 @@ export function Hero() {
     >
       <VideoWall columns={COLUMNS} />
 
-      <div className="relative z-10 container mx-auto max-w-4xl px-4 text-center sm:px-6">
+      <div className="relative z-10 container mx-auto max-w-5xl px-4 text-center sm:px-6">
         <div className="border-border/70 bg-card/60 mb-7 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 backdrop-blur-md">
           <Sparkles className="text-primary size-3.5" aria-hidden="true" />
           <span className="text-foreground/90 text-xs font-semibold tracking-wide">
@@ -70,10 +70,11 @@ export function Hero() {
           </span>
         </div>
 
-        <h1 className="text-foreground mx-auto mb-6 max-w-3xl text-[2.6rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-6xl lg:text-[4.25rem]">
-          {m['genematic.home.hero_title_line1']()}
-          <br className="hidden sm:block" />{' '}
-          <span className="text-primary italic">
+        <h1 className="text-foreground mx-auto mb-6 max-w-[64rem] text-[2.35rem] leading-[1.06] font-semibold tracking-[-0.035em] text-pretty sm:text-[3.5rem] lg:text-[4.5rem]">
+          <span className="block">
+            {m['genematic.home.hero_title_line1']()}
+          </span>
+          <span className="text-primary mt-1.5 block text-[0.68em] leading-[1.15] font-medium tracking-[-0.02em] italic">
             {m['genematic.home.hero_title_motion']()}
           </span>
         </h1>
