@@ -111,27 +111,13 @@ export function Pricing({
             duration: '5s',
             resolution,
           });
-          return m['stp.pricing.resolution_example']({
-            resolution,
-            cost,
-            count: Math.floor(product.credits / cost),
-          });
+          const count = Math.floor(product.credits / cost);
+          if (count === 0)
+            return m['stp.pricing.available_from_creator']({ cost });
+          return count === 1
+            ? m['stp.pricing.resolution_example_one']({ resolution, cost })
+            : m['stp.pricing.resolution_example']({ resolution, cost, count });
         }),
-        ...(product.credits <
-        calculateCredits('seedance-2-5', 'video', {
-          duration: '5s',
-          resolution: '1080p',
-        })
-          ? [
-              m['stp.pricing.insufficient_1080p']({
-                cost: calculateCredits('seedance-2-5', 'video', {
-                  duration: '5s',
-                  resolution: '1080p',
-                }),
-              }),
-            ]
-          : []),
-
         m['stp.pricing.failure_refund'](),
       ],
       cta: m['stp.pricing.buy_now'](),

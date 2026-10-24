@@ -1,5 +1,17 @@
 # Upgrading an existing project
 
+## 2026-10-24 Payment atomicity, screened private uploads and public page follow-up
+
+- Payment checkout, verified legacy paid-order repair, renewal, and provider refund writes now use `atomic()`. Subscription checkout and renewals require provider-reported amount/currency validation too. Replays from a different provider cannot fulfill an order. Renewal guards prevent duplicate or backward period advances. Provider-refunded orders use `refunded`, not `failed`.
+- `settleCheckoutOrder` is again exported for integration tests. Tests use full amount/currency envelopes. SQLite test cleanup closes its client and retries Windows EBUSY deletion. HUF/TWD ledger precision is fixed at ISO two decimals despite ICU display changes; fractional whole-unit PayPal amounts are rejected rather than rounded.
+- Task failure, timeout and credit restoration are bundled atomically. A late success cannot resurrect a refunded terminal task. This does not automatically audit or refund every historical failed task.
+- Create private R2 bucket `genematicai-private-media` and bind it as `PRIVATE_MEDIA` (root wrangler config includes the binding). Keep public access disabled. Existing public buckets/assets are not deleted. Newly migrated generated media uses the private bucket on Workers; provider-hosted URLs remain subject to provider access and retention until migration completes.
+- Enable Cloud Vision API with billing in your Google Cloud project. Set `GOOGLE_CLOUD_VISION_API_KEY` as a Worker Secret (or a local server env value). Restrict the key to Cloud Vision API. No browser/public configuration needs the key. Missing credentials, request failures, or incomplete/unknown verdicts reject new uploads with 503.
+- Uploads now allow still JPEG/PNG/WebP, max 5 MiB per file, nine files and 20 MiB total. Animated inputs are rejected because a single-frame check cannot establish safety for all frames. Uploaded bytes are sent to Google SafeSearch before storage; adult or violence rated LIKELY/VERY_LIKELY is rejected (422). This is not age, consent, ownership or CSAM verification, and does not independently review generated outputs.
+- Browser private reads require the owner session. Provider reads use one-hour HMAC grants scoped to an object; signatures are bearer credentials until expiry. Reference generation accepts only the caller's screened private uploads; older public/external references must be reuploaded. GET/HEAD support private reads; range requests support media playback. This is intentionally stricter than the former arbitrary reference URL contract.
+- `/video-face-swap` stays at the same URL and embeds the actual image-to-video workspace, initially in image mode. It animates authorized portraits; source-video face replacement is not implemented. No URL/domain redirect is introduced.
+- Removed all remaining route keywords tags, empty sameAs and FAQPage markup. Google discontinued FAQ rich results on May 7, 2026. Removed the manual hero preload (React already emits one). Pricing AggregateOffer is derived from the three current catalog packs. Starter recommends the Creator pack for the 750-credit example without duplicated zero-count warnings; one-video grammar and model-dependent resolution labels are corrected.
+
 ## 2026-10-24 Public page accuracy
 
 - The built-in prompt guide moves from `/posts/8-best-nano-banana-2-prompts` to `/posts/4-nano-banana-2-prompts`; old URLs redirect permanently (301), preserving the active locale. Update external links when practical.

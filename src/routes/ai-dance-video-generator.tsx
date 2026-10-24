@@ -72,20 +72,6 @@ export const Route = createFileRoute('/ai-dance-video-generator')({
           href: `${envConfigs.app_url}/ai-dance-video-generator`,
         },
       ],
-      scripts: [
-        {
-          type: 'application/ld+json',
-          children: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: danceFaq(locale).map(([name, text]) => ({
-              '@type': 'Question',
-              name,
-              acceptedAnswer: { '@type': 'Answer', text },
-            })),
-          }),
-        },
-      ],
     };
   },
   component: DancePage,

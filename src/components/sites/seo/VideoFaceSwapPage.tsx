@@ -9,6 +9,7 @@ import {
 
 import { Link } from '@/core/i18n/navigation';
 import { m } from '@/paraglide/messages.js';
+import { VideoGeneratorWorkspace } from '@/components/sites/generator/VideoGeneratorWorkspace';
 
 const faqs = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
@@ -30,7 +31,7 @@ export function VideoFaceSwapPage() {
               {m['genematic.face_swap.subtitle']()}
             </p>
             <Link
-              href="/ai-video-generator"
+              href="#portrait-studio"
               className="bg-primary text-primary-foreground mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold shadow-lg transition-transform hover:scale-[1.02]"
             >
               {m['genematic.face_swap.cta']()}
@@ -42,23 +43,33 @@ export function VideoFaceSwapPage() {
           </div>
         </section>
 
+        <section
+          id="portrait-studio"
+          className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-20 sm:px-6 lg:px-8"
+        >
+          <VideoGeneratorWorkspace
+            initialMode="image-to-video"
+            search={{ prompt: m['genematic.face_swap.default_prompt']() }}
+          />
+        </section>
+
         <section className="px-4 pb-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-3">
-            {[
-              [Upload, 'genematic.face_swap.card_upload'],
-              [Images, 'genematic.face_swap.card_photo'],
-              [Video, 'genematic.face_swap.card_result'],
-            ].map(([Icon, key]) => (
+            {(
+              [
+                [Upload, 'genematic.face_swap.card_upload'],
+                [Images, 'genematic.face_swap.card_photo'],
+                [Video, 'genematic.face_swap.card_result'],
+              ] as const
+            ).map(([Icon, key]) => (
               <div
                 key={key}
                 className="border-border bg-card rounded-2xl border p-6"
               >
                 <Icon className="text-primary mb-4 size-6" />
-                <h2 className="font-semibold">
-                  {m[`${key}.title` as keyof typeof m]()}
-                </h2>
+                <h2 className="font-semibold">{m[`${key}.title`]()}</h2>
                 <p className="text-muted-foreground mt-2 text-sm leading-6">
-                  {m[`${key}.description` as keyof typeof m]()}
+                  {m[`${key}.description`]()}
                 </p>
               </div>
             ))}
@@ -71,21 +82,17 @@ export function VideoFaceSwapPage() {
               {m['genematic.face_swap.how_title']()}
             </h2>
             <div className="mt-8 grid gap-6 md:grid-cols-3">
-              {[1, 2, 3].map((step) => (
+              {([1, 2, 3] as const).map((step) => (
                 <div key={step} className="flex gap-4">
                   <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">
                     {step}
                   </span>
                   <div>
                     <h3 className="font-semibold">
-                      {m[
-                        `genematic.face_swap.step${step}_title` as keyof typeof m
-                      ]()}
+                      {m[`genematic.face_swap.step${step}_title`]()}
                     </h3>
                     <p className="text-muted-foreground mt-2 text-sm leading-6">
-                      {m[
-                        `genematic.face_swap.step${step}_description` as keyof typeof m
-                      ]()}
+                      {m[`genematic.face_swap.step${step}_description`]()}
                     </p>
                   </div>
                 </div>
@@ -100,18 +107,18 @@ export function VideoFaceSwapPage() {
               {m['genematic.face_swap.free_title']()}
             </h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {[1, 2, 3, 4].map((item) => (
+              {([1, 2, 3, 4] as const).map((item) => (
                 <div key={item} className="flex items-start gap-3">
                   <Check className="text-primary mt-0.5 size-5 shrink-0" />
                   <span className="text-muted-foreground">
-                    {m[`genematic.face_swap.free${item}` as keyof typeof m]()}
+                    {m[`genematic.face_swap.free${item}`]()}
                   </span>
                 </div>
               ))}
             </div>
             <div className="mt-8 flex flex-wrap gap-4 text-sm">
               <Link
-                href="/ai-video-generator"
+                href="#portrait-studio"
                 className="text-primary inline-flex items-center gap-1 hover:underline"
               >
                 {m['genematic.face_swap.photo_tool_link']()}{' '}
@@ -137,10 +144,10 @@ export function VideoFaceSwapPage() {
               {faqs.map((n) => (
                 <details key={n} className="py-5">
                   <summary className="cursor-pointer font-semibold">
-                    {m[`genematic.face_swap.faq${n}_q` as keyof typeof m]()}
+                    {m[`genematic.face_swap.faq${n}_q`]()}
                   </summary>
                   <p className="text-muted-foreground mt-3 max-w-3xl leading-7">
-                    {m[`genematic.face_swap.faq${n}_a` as keyof typeof m]()}
+                    {m[`genematic.face_swap.faq${n}_a`]()}
                   </p>
                 </details>
               ))}
@@ -153,7 +160,7 @@ export function VideoFaceSwapPage() {
             {m['genematic.face_swap.final_title']()}
           </h2>
           <Link
-            href="/ai-video-generator"
+            href="#portrait-studio"
             className="bg-primary text-primary-foreground mt-6 inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold"
           >
             {m['genematic.face_swap.cta']()} <ArrowRight className="size-4" />

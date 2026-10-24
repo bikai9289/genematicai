@@ -41,7 +41,7 @@ async function GET({ request }: { request: Request }) {
         } catch {}
 
         // 如果用户显式设置为 private，则不公开展示
-        if (parsedOptions.visibility === 'private') {
+        if (parsedOptions.visibility !== 'public') {
           return null;
         }
 
@@ -84,7 +84,9 @@ async function GET({ request }: { request: Request }) {
             : extractMediaUrl(parsedInfo);
         }
 
-        if (!mediaUrl) return null;
+        // A private owner-only URL is never a usable public showcase asset.
+        if (!mediaUrl || mediaUrl.includes('/api/storage/private?'))
+          return null;
 
         if (
           mediaUrl.includes('palix-ai.mp4') ||

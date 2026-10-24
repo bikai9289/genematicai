@@ -141,7 +141,7 @@ async function GET({ request }: { request: Request }) {
             aspectRatio: options.ratio || options.aspect_ratio || undefined,
             duration: options.duration || undefined,
             visibility:
-              (options.visibility as 'public' | 'private') || 'public',
+              (options.visibility as 'public' | 'private') || 'private',
             createdAt:
               t.createdAt instanceof Date
                 ? t.createdAt.getTime()

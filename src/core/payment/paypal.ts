@@ -29,6 +29,9 @@ export function toPayPalAmountValue(minor: number, currency: string): string {
   const code = String(currency || '').toUpperCase();
   const digits = currencyMinorDigits(code);
   const major = minor / 10 ** digits;
+  if (PAYPAL_ZERO_DECIMAL_CURRENCIES.has(code) && !Number.isInteger(major)) {
+    throw new Error(`PayPal requires whole-unit amounts for ${code}`);
+  }
   return major.toFixed(PAYPAL_ZERO_DECIMAL_CURRENCIES.has(code) ? 0 : digits);
 }
 

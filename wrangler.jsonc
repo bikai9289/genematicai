@@ -26,6 +26,9 @@
       "database_id": "ebcbcd3d-eaca-48ed-a9f1-8335952dbb4d",
     },
   ],
+  "r2_buckets": [
+    { "binding": "PRIVATE_MEDIA", "bucket_name": "genematicai-private-media" }
+  ],
   "durable_objects": {
     "bindings": [
       {

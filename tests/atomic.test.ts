@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 // Isolated database; no application modules load before the env is set.
 // Default: a temp SQLite file (the batch path). ATOMIC_D1=1 runs the same
@@ -80,7 +80,8 @@ const { settleCheckoutOrder, handleSubscriptionRenewal } =
   await import('../src/modules/payment/service');
 const { consume, revoke, getBalance } =
   await import('../src/modules/credits/service');
-const { createTask } = await import('../src/modules/ai-tasks/service');
+const { createTask, updateTask, AITaskStatus } =
+  await import('../src/modules/ai-tasks/service');
 const { redeemInviteCode } =
   await import('../src/modules/invite-codes/service');
 
@@ -100,7 +101,13 @@ before(async () => {
 after(async () => {
   setAtomicModeForTests(undefined);
   await disposeD1?.();
-  await rm(directory, { recursive: true, force: true });
+  if (!pgServer && !useD1) db().$client.close();
+  await rm(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
   if (pgServer) {
     await (
       await import('../src/core/db')
@@ -149,7 +156,11 @@ async function createdOrder(userId: string, creditsAmount = 100) {
 }
 const paid = (orderNo: string) => ({
   paymentStatus: 'paid',
-  paymentInfo: { amount: 500, transactionId: `T-${orderNo}` },
+  paymentInfo: {
+    paymentAmount: 500,
+    paymentCurrency: 'usd',
+    transactionId: `T-${orderNo}`,
+  },
   paymentResult: { id: orderNo },
 });
 const grantsFor = (orderNo: string) =>
@@ -165,6 +176,69 @@ const grantsFor = (orderNo: string) =>
 
 let user = 0;
 for (const mode of MODES) {
+  test(`[${mode}] concurrent failure notifications restore task credits once`, async () => {
+    setAtomicModeForTests(mode);
+    const u = `u${user++}`;
+    await grantCredits(u, 50);
+    const task = await createTask({
+      userId: u,
+      mediaType: 'image',
+      provider: 'x',
+      model: 'm',
+      prompt: 'p',
+      costCredits: 20,
+    });
+    assert.equal(await getBalance(u), 30);
+    await Promise.all(
+      Array.from({ length: 3 }, () =>
+        updateTask({ taskId: task.id, status: AITaskStatus.FAILED })
+      )
+    );
+    assert.equal(await getBalance(u), 50);
+    await updateTask({ taskId: task.id, status: AITaskStatus.SUCCESS });
+    const [row] = await db()
+      .select()
+      .from(schema.aiTask)
+      .where(eq(schema.aiTask.id, task.id));
+    assert.equal(
+      row.status,
+      'failed',
+      'late success must not resurrect a refunded task'
+    );
+  });
+  test(
+    `[${mode}] settlement grant failure rolls back the paid claim and permits a retry`,
+    { skip: Boolean(pgServer) },
+    async () => {
+      setAtomicModeForTests(mode);
+      const u = `u${user++}`;
+      const ord = await createdOrder(u);
+      await db().run(
+        sql.raw(
+          "CREATE TRIGGER reject_settlement_grant BEFORE INSERT ON credit WHEN NEW.order_no = '" +
+            ord.orderNo +
+            "' BEGIN SELECT RAISE(ABORT, 'injected grant failure'); END"
+        )
+      );
+      try {
+        await assert.rejects(
+          settleCheckoutOrder(ord, paid(ord.orderNo), 'stripe'),
+          /injected grant failure/
+        );
+        const [current] = await db()
+          .select()
+          .from(schema.order)
+          .where(eq(schema.order.id, ord.id));
+        assert.equal(current.status, 'created');
+        assert.equal((await grantsFor(ord.orderNo)).length, 0);
+      } finally {
+        await db().run(sql`DROP TRIGGER reject_settlement_grant`);
+      }
+      await settleCheckoutOrder(ord, paid(ord.orderNo), 'stripe');
+      assert.equal((await grantsFor(ord.orderNo)).length, 1);
+    }
+  );
+
   test(`[${mode}] a failing statement rolls back every earlier one`, async () => {
     setAtomicModeForTests(mode);
     const u = `u${user++}`;
@@ -408,7 +482,7 @@ for (const mode of MODES) {
         currentPeriodStart: new Date('2026-02-01'),
         currentPeriodEnd: new Date('2026-03-01'),
       },
-      paymentInfo: {},
+      paymentInfo: { paymentAmount: 500, paymentCurrency: 'usd' },
       paymentResult: {},
     };
     await Promise.all(

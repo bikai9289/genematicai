@@ -7,8 +7,6 @@ import { Footer } from '@/blocks/footer';
 import { Header } from '@/blocks/header';
 import { VideoFaceSwapPage } from '@/components/sites/seo/VideoFaceSwapPage';
 
-const faqNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
-
 export const Route = createFileRoute('/video-face-swap')({
   loader: () => ({ locale: getLocale() }),
   head: ({ loaderData }) => {
@@ -16,25 +14,12 @@ export const Route = createFileRoute('/video-face-swap')({
     const canonical = localizeUrl(`${envConfigs.app_url}/video-face-swap`, {
       locale,
     }).href;
-    const questions = faqNumbers.map((n) => ({
-      '@type': 'Question',
-      name: m[`genematic.face_swap.faq${n}_q`]({}, { locale }),
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: m[`genematic.face_swap.faq${n}_a`]({}, { locale }),
-      },
-    }));
     return {
       meta: [
         { title: m['genematic.face_swap.title']({}, { locale }) },
         {
           name: 'description',
           content: m['genematic.face_swap.meta_description']({}, { locale }),
-        },
-        {
-          name: 'keywords',
-          content:
-            'video face swap, ai video face swap, free ai face swap, face swap video online free',
         },
         {
           property: 'og:title',
@@ -86,7 +71,6 @@ export const Route = createFileRoute('/video-face-swap')({
                 operatingSystem: 'Web',
                 isAccessibleForFree: false,
               },
-              { '@type': 'FAQPage', mainEntity: questions },
             ],
           }),
         },

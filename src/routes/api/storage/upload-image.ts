@@ -1,157 +1,117 @@
 import { createFileRoute } from '@tanstack/react-router';
 
 import { getAuth } from '@/core/auth';
-import { envConfigs } from '@/config';
-import { getStorage } from '@/modules/storage/service';
+import {
+  detectUploadImage,
+  MediaPolicyError,
+  screenImage,
+} from '@/core/moderation/safe-search';
+import {
+  mediaKey,
+  privateBucket,
+  privateMediaUrl,
+} from '@/core/storage/private';
+import { getConfig } from '@/modules/config/service';
 import { md5 } from '@/lib/hash';
 import { enforceMinIntervalRateLimit } from '@/lib/rate-limit';
 import { respData, respErr } from '@/lib/resp';
 
-// Raster formats only. SVG can carry script and would run on whatever origin
-// serves it, so it is not accepted from users.
-const extFromMime = (mimeType: string) => {
-  const map: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/jpg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-    'image/avif': 'avif',
-    'image/heic': 'heic',
-    'image/heif': 'heif',
-  };
-  return map[mimeType] || '';
-};
-
-// Cap for the no-storage local-disk fallback (dev). Configurable via INLINE_IMAGE_MAX_KB.
-// Per request: bounds memory (formData() buffers the whole body) and storage use.
-const MAX_REQUEST_BYTES = 20 * 1024 * 1024;
-
-const INLINE_MAX_BYTES =
-  (Number(envConfigs.inline_image_max_kb) || 10240) * 1024;
-const MAX_IMAGE_COUNT = 9;
-
-async function POST({ request }: { request: Request }) {
+const MAX_TOTAL = 20 * 1024 * 1024;
+const MAX_FILE = 5 * 1024 * 1024;
+async function boundedFormData(request: Request) {
+  if (!request.body) throw new MediaPolicyError('MEDIA_NO_FILES');
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > MAX_TOTAL + 64 * 1024) {
+      await reader.cancel();
+      throw new MediaPolicyError('MEDIA_UPLOAD_TOO_LARGE', 413);
+    }
+    chunks.push(value);
+  }
+  try {
+    return await new Response(Buffer.concat(chunks), {
+      headers: { 'Content-Type': request.headers.get('content-type') || '' },
+    }).formData();
+  } catch {
+    throw new MediaPolicyError('MEDIA_INVALID_FORM');
+  }
+}
+export async function POST({ request }: { request: Request }) {
   const limited = enforceMinIntervalRateLimit(request, {
     intervalMs: 1000,
     keyPrefix: 'upload-image',
   });
   if (limited) return limited;
-
+  const stored: string[] = [];
   try {
-    const auth = getAuth();
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user) return respErr('Unauthorized');
-
-    // Per account too: one user can't sidestep the IP bucket by switching networks.
+    const session = await getAuth().api.getSession({
+      headers: request.headers,
+    });
+    if (!session?.user) return respErr('UNAUTHORIZED', { status: 401 });
     const userLimited = enforceMinIntervalRateLimit(request, {
       intervalMs: 1000,
       keyPrefix: 'upload-image',
       extraKey: session.user.id,
     });
     if (userLimited) return userLimited;
-
-    // Refuse oversized bodies before buffering them, when the size is declared.
-    const declared = Number(request.headers.get('content-length') || 0);
-    if (declared > MAX_REQUEST_BYTES + 64 * 1024) {
-      return respErr('Upload is larger than 20MB in total');
+    if (Number(request.headers.get('content-length')) > MAX_TOTAL + 64 * 1024)
+      throw new MediaPolicyError('MEDIA_UPLOAD_TOO_LARGE', 413);
+    const form = await boundedFormData(request);
+    const files = form.getAll(form.has('files') ? 'files' : 'file');
+    if (!files.length) throw new MediaPolicyError('MEDIA_NO_FILES');
+    if (files.length > 9) throw new MediaPolicyError('MEDIA_TOO_MANY_FILES');
+    if (files.some((file) => !(file instanceof File)))
+      throw new MediaPolicyError('MEDIA_INVALID_FILE');
+    const images = files as File[];
+    if (images.reduce((size, file) => size + file.size, 0) > MAX_TOTAL)
+      throw new MediaPolicyError('MEDIA_UPLOAD_TOO_LARGE', 413);
+    const bucket = privateBucket();
+    const key = (await getConfig('google_cloud_vision_api_key')) || '';
+    const checked = [];
+    for (const file of images) {
+      if (!file.size || file.size > MAX_FILE)
+        throw new MediaPolicyError('MEDIA_FILE_TOO_LARGE', 413);
+      const body = new Uint8Array(await file.arrayBuffer());
+      const format = detectUploadImage(body);
+      await screenImage(body, key);
+      checked.push({ file, body, format });
     }
-
-    const formData = await request.formData();
-    const files = (
-      formData.getAll('files').length > 0
-        ? formData.getAll('files')
-        : formData.getAll('file')
-    ) as File[];
-    if (!files.length) return respErr('No files provided');
-    if (files.length > MAX_IMAGE_COUNT) {
-      return respErr(`Too many files (maximum ${MAX_IMAGE_COUNT})`);
-    }
-    if (files.reduce((sum, f) => sum + f.size, 0) > MAX_REQUEST_BYTES) {
-      return respErr('Upload is larger than 20MB in total');
-    }
-
-    const storage = await getStorage();
-    const uploadResults: Array<{
-      url: string;
-      key: string;
-      filename: string;
-      deduped: boolean;
-    }> = [];
-
-    for (const file of files) {
-      const extension = extFromMime(file.type);
-      if (!extension) {
-        return respErr(`File ${file.name} is not an image`);
-      }
-      if (file.size > INLINE_MAX_BYTES) {
-        const limitKb = Math.round(INLINE_MAX_BYTES / 1024);
-        return respErr(
-          `Image too large (${(file.size / 1024).toFixed(0)}KB > ${limitKb}KB)`
-        );
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const body = new Uint8Array(arrayBuffer);
-
-      const digest = md5(body);
-      const ext = extension;
-      // R2Provider prepends its own uploadPath (default `uploads`).
-      const datePath = new Date().toISOString().slice(0, 10);
-      const objectKey = `${datePath}/${digest}.${ext}`;
-
-      // If R2 storage is not configured, return clear error message
-      if (!storage) {
-        return respErr(
-          'Cloudflare R2 storage is not configured. Please configure R2 in environment variables or admin settings.'
-        );
-      }
-
-      const exists = await storage.exists({ key: objectKey });
-      if (exists) {
-        const publicUrl = storage.getPublicUrl({ key: objectKey });
-        if (publicUrl) {
-          uploadResults.push({
-            url: publicUrl,
-            key: objectKey,
-            filename: file.name,
-            deduped: true,
-          });
-          continue;
-        }
-      }
-
-      const result = await storage.uploadFile({
-        body,
-        key: objectKey,
-        contentType: file.type,
-        disposition: 'inline',
+    const results = [];
+    for (const { file, body, format } of checked) {
+      const objectKey = mediaKey(session.user.id, format.extension);
+      stored.push(objectKey);
+      await bucket.put(objectKey, body, {
+        httpMetadata: { contentType: format.contentType },
+        customMetadata: {
+          owner: md5(session.user.id),
+          moderation: 'safe-search-passed',
+        },
       });
-
-      if (!result.success || !result.url) {
-        return respErr(result.error || 'Upload failed');
-      }
-
-      uploadResults.push({
-        url: result.url,
-        key: result.key || objectKey,
+      results.push({
+        url: privateMediaUrl(objectKey),
+        key: objectKey,
         filename: file.name,
         deduped: false,
       });
     }
-
-    return respData({
-      urls: uploadResults.map((r) => r.url),
-      results: uploadResults,
-    });
-  } catch (e: any) {
-    console.error('upload image failed:', e, e?.cause);
-    return respErr('Storage upload failed');
+    return respData({ urls: results.map((r) => r.url), results });
+  } catch (error) {
+    if (stored.length)
+      await Promise.allSettled(
+        stored.map((key) => privateBucket().delete(key))
+      );
+    const failure =
+      error instanceof MediaPolicyError
+        ? error
+        : new MediaPolicyError('MEDIA_UPLOAD_UNAVAILABLE', 503);
+    return respErr(failure.code, { status: failure.status });
   }
 }
-
 export const Route = createFileRoute('/api/storage/upload-image')({
-  server: {
-    handlers: { POST },
-  },
+  server: { handlers: { POST } },
 });

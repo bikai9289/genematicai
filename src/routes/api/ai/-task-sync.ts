@@ -7,10 +7,11 @@ import {
   extractVideoUrl,
 } from '@/core/ai/types';
 import { db } from '@/core/db';
+import { atomic, AtomicGuardError, guard } from '@/core/db/atomic';
 import { aiTask } from '@/config/db/schema';
 import { expireTaskIfNeeded } from '@/modules/ai-tasks/service';
 import { queryAITask } from '@/modules/ai/service';
-import { revoke } from '@/modules/credits/service';
+import { planRevoke } from '@/modules/credits/service';
 import { getUuid } from '@/lib/hash';
 
 import {
@@ -206,7 +207,26 @@ export async function syncSingleTask(existingTask: any, taskId: string) {
       }
 
       if (Object.keys(updates).length > 0) {
-        await db().update(aiTask).set(updates).where(canTransition);
+        const refund =
+          isFailed && !isTerminal && existingTask.creditId
+            ? await planRevoke(existingTask.creditId)
+            : undefined;
+        if (isFailed && !isTerminal) updates.creditId = null;
+        try {
+          await atomic((q) => [
+            guard({
+              table: aiTask,
+              column: 'userId',
+              where: eq(aiTask.id, existingTask.id),
+              require: canTransition!,
+              message: 'Task transition already handled',
+            }),
+            q.update(aiTask).set(updates).where(eq(aiTask.id, existingTask.id)),
+            ...(refund?.steps(q) || []),
+          ]);
+        } catch (error) {
+          if (!(error instanceof AtomicGuardError)) throw error;
+        }
       }
 
       const [currentTask] = await db()
@@ -215,19 +235,6 @@ export async function syncSingleTask(existingTask: any, taskId: string) {
         .where(eq(aiTask.id, existingTask.id))
         .limit(1);
       if (currentTask) {
-        if (
-          isFailed &&
-          (currentTask.status === 'failed' ||
-            currentTask.status === 'canceled') &&
-          currentTask.creditId
-        ) {
-          const creditToRevoke = currentTask.creditId;
-          await db()
-            .update(aiTask)
-            .set({ creditId: null })
-            .where(eq(aiTask.id, currentTask.id));
-          await revoke(creditToRevoke);
-        }
         return toTaskResult(currentTask, taskId);
       }
       throw new Error(`Failed to find task ${existingTask.id} after update`);

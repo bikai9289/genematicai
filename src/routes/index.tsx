@@ -113,34 +113,7 @@ export const Route = createFileRoute('/')({
           ),
         },
       ],
-      scripts: [
-        {
-          type: 'application/ld+json',
-          children: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: [
-              [m['landing.faq.q1'], m['landing.faq.a1']],
-              [m['landing.faq.q2'], m['landing.faq.a2']],
-              [m['landing.faq.q3'], m['landing.faq.a3']],
-              [m['landing.faq.q4'], m['landing.faq.a4']],
-            ].map(([question, answer]) => ({
-              '@type': 'Question',
-              name: question({}, { locale: locale as any }),
-              acceptedAnswer: {
-                '@type': 'Answer',
-                text: answer({}, { locale: locale as any }),
-              },
-            })),
-          }).replace(/</g, '\\u003c'),
-        },
-      ],
       links: [
-        {
-          rel: 'preload',
-          as: 'image',
-          href: '/oss/display/home/text-to-video-ai-cover.webp',
-        },
         { rel: 'canonical', href: urlFor(locale) },
         ...locales.map((loc) => ({
           rel: 'alternate',

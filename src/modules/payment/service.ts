@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 
 import { db } from '@/core/db';
-import { atomic, guard } from '@/core/db/atomic';
+import { atomic, AtomicGuardError, guard } from '@/core/db/atomic';
 import {
   AlipayProvider,
   CreemProvider,
@@ -30,16 +30,11 @@ import {
   findBySubscriptionNo,
   SubscriptionStatus,
   updateBySubscriptionNo,
-  type NewSubscription,
   type UpdateSubscription,
 } from '@/modules/subscriptions/service';
 import { getSnowId, getUniSeq, getUuid, md5 } from '@/lib/hash';
 
-import {
-  grantOrderCreditsOnce,
-  insertIgnoringConflict,
-  paymentAffectedRows,
-} from './order-credits';
+import { paymentAffectedRows } from './order-credits';
 
 export { paymentAffectedRows };
 
@@ -127,13 +122,6 @@ async function verifyPaidAmount(
     .trim()
     .toLowerCase();
   const base = { expected, expectedCurrency };
-  if (
-    existingOrder.paymentType === PaymentType.SUBSCRIPTION ||
-    existingOrder.paymentType === 'subscription' ||
-    expected <= 0
-  ) {
-    return { ok: true, ...base, paid: null, paidCurrency: '' };
-  }
 
   let { amount, currency } = reportedPaid(provider, session.paymentInfo);
   let info = session.paymentInfo;
@@ -601,139 +589,161 @@ function isSubscriptionOrder(ord: any): boolean {
   );
 }
 
-/**
- * Attach the provider subscription to an order exactly once: claim the
- * order's empty subscription_no slot with a conditional UPDATE; only the
- * claimer inserts the subscription row (or links an existing one with the
- * same provider subscription id). Losers read back the winner's number.
- */
-async function attachOrderSubscription(
-  tx: any,
-  params: { ord: any; session: any; provider: string; paymentInfo: any }
-): Promise<{ subscriptionNo: string; created: boolean }> {
-  const { ord, session, provider, paymentInfo } = params;
-  const subscriptionInfo = session.subscriptionInfo;
-
-  const [existingSub] = await tx
-    .select({ subscriptionNo: subscription.subscriptionNo })
-    .from(subscription)
-    .where(
-      and(
-        eq(subscription.paymentProvider, provider),
-        eq(subscription.subscriptionId, session.subscriptionId),
-        isNull(subscription.deletedAt)
-      )
-    )
-    .limit(1);
-  const subscriptionNo: string = existingSub?.subscriptionNo || getSnowId();
-
-  const claim = await tx
-    .update(order)
-    .set({
-      subscriptionNo,
-      subscriptionId: session.subscriptionId,
-      subscriptionResult: JSON.stringify(session.subscriptionResult),
-    })
-    .where(
-      and(
-        eq(order.id, ord.id),
-        or(isNull(order.subscriptionNo), eq(order.subscriptionNo, ''))
-      )
-    );
-  if (paymentAffectedRows(claim) !== 1) {
-    const [current] = await tx
-      .select({ subscriptionNo: order.subscriptionNo })
-      .from(order)
-      .where(eq(order.id, ord.id))
-      .limit(1);
-    return { subscriptionNo: current?.subscriptionNo || '', created: false };
-  }
-  if (existingSub) return { subscriptionNo, created: false };
-
-  const newSub: any = {
-    id: getUuid(),
-    subscriptionNo,
-    userId: ord.userId,
-    userEmail: ord.userEmail || ord.paymentEmail || '',
-    status: subscriptionInfo.status || SubscriptionStatus.ACTIVE,
-    paymentProvider: provider,
-    subscriptionId: session.subscriptionId,
-    subscriptionResult: JSON.stringify(session.subscriptionResult),
-    productId: ord.productId,
-    description: subscriptionInfo.description || 'Subscription Created',
-    amount: subscriptionInfo.amount,
-    currency: subscriptionInfo.currency,
-    interval: subscriptionInfo.interval,
-    intervalCount: subscriptionInfo.intervalCount,
-    trialPeriodDays: subscriptionInfo.trialPeriodDays,
-    currentPeriodStart: subscriptionInfo.currentPeriodStart,
-    currentPeriodEnd: subscriptionInfo.currentPeriodEnd,
-    billingUrl: subscriptionInfo.billingUrl,
-    planName: ord.planName || ord.productName,
-    productName: ord.productName,
-    creditsAmount: ord.creditsAmount,
-    creditsValidDays: ord.creditsValidDays,
-    paymentProductId: ord.paymentProductId,
-    paymentUserId: paymentInfo?.paymentUserId,
-  };
-  await tx.insert(subscription).values(newSub);
-  return { subscriptionNo, created: true };
+/** Build every fulfillment write after completing the reads; never read inside atomic(). */
+function insertOnce(q: any, table: any, values: Record<string, any>) {
+  const builder = q.insert(table);
+  return typeof builder.ignore === 'function'
+    ? builder.ignore().values(values)
+    : builder.values(values).onConflictDoNothing();
 }
 
-/**
- * Idempotent repair for an order that is already paid: attach a missing
- * subscription and grant missing credits. Never re-fulfills.
- */
-async function backfillPaidOrder(
-  existingOrder: any,
+async function planFulfillment(
+  ord: any,
   session: any,
-  provider: string
+  provider: string,
+  paymentInfo: any
 ) {
-  const subscriptionInfo = session.subscriptionInfo;
-  let createdSubscriptionNo: string | null = null;
+  const info = session.subscriptionInfo;
+  let subscriptionNo = ord.subscriptionNo || '';
+  let newSub: any;
+  if (
+    !subscriptionNo &&
+    isSubscriptionOrder(ord) &&
+    info &&
+    session.subscriptionId
+  ) {
+    const [existing] = await db()
+      .select()
+      .from(subscription)
+      .where(
+        and(
+          eq(subscription.paymentProvider, provider),
+          eq(subscription.subscriptionId, session.subscriptionId),
+          isNull(subscription.deletedAt)
+        )
+      )
+      .limit(1);
+    if (existing && existing.userId !== ord.userId)
+      throw new Error('Subscription owner mismatch');
+    subscriptionNo =
+      existing?.subscriptionNo ||
+      `sub-${md5(`${provider}:${session.subscriptionId}`)}`;
+    if (!existing)
+      newSub = {
+        id: subscriptionNo,
+        subscriptionNo,
+        userId: ord.userId,
+        userEmail: ord.userEmail || paymentInfo?.paymentEmail || '',
+        status: info.status || SubscriptionStatus.ACTIVE,
+        paymentProvider: provider,
+        subscriptionId: session.subscriptionId,
+        subscriptionResult: JSON.stringify(session.subscriptionResult),
+        productId: ord.productId,
+        description: info.description || 'Subscription Created',
+        amount: info.amount,
+        currency: info.currency,
+        interval: info.interval,
+        intervalCount: info.intervalCount,
+        trialPeriodDays: info.trialPeriodDays,
+        currentPeriodStart: info.currentPeriodStart,
+        currentPeriodEnd: info.currentPeriodEnd,
+        billingUrl: info.billingUrl,
+        planName: ord.planName || ord.productName,
+        productName: ord.productName,
+        creditsAmount: ord.creditsAmount,
+        creditsValidDays: ord.creditsValidDays,
+        paymentProductId: ord.paymentProductId,
+        paymentUserId: paymentInfo?.paymentUserId,
+      };
+  }
+  const [existingGrant] = await db()
+    .select({ id: credit.id })
+    .from(credit)
+    .where(
+      and(eq(credit.orderNo, ord.orderNo), eq(credit.transactionType, 'grant'))
+    )
+    .limit(1);
+  const grant =
+    !existingGrant && Number(ord.creditsAmount) > 0
+      ? {
+          id: getUuid(),
+          userId: ord.userId,
+          userEmail: ord.userEmail || '',
+          orderNo: ord.orderNo,
+          subscriptionNo,
+          transactionNo: `grant-${ord.orderNo}`,
+          transactionType: 'grant',
+          transactionScene:
+            ord.paymentType === 'renew'
+              ? 'renewal'
+              : isSubscriptionOrder(ord)
+                ? 'subscription'
+                : 'payment',
+          credits: ord.creditsAmount,
+          remainingCredits: ord.creditsAmount,
+          description: 'Grant credit',
+          status: 'active',
+          expiresAt: calculateCreditExpirationTime({
+            creditsValidDays: ord.creditsValidDays || 0,
+            currentPeriodEnd: info?.currentPeriodEnd,
+          }),
+        }
+      : null;
+  return {
+    subscriptionNo,
+    steps: (q: any) => [
+      newSub && insertOnce(q, subscription, newSub),
+      subscriptionNo &&
+        guard({
+          table: subscription,
+          column: 'userId',
+          where: eq(subscription.subscriptionNo, subscriptionNo),
+          require: and(
+            eq(subscription.userId, ord.userId),
+            eq(subscription.paymentProvider, provider),
+            isNull(subscription.deletedAt)
+          )!,
+          message: 'Subscription ownership changed',
+        }),
 
-  await db().transaction(async (tx: any) => {
-    let subscriptionNo: string = existingOrder.subscriptionNo || '';
-    if (
-      !subscriptionNo &&
-      isSubscriptionOrder(existingOrder) &&
-      subscriptionInfo &&
-      session.subscriptionId
-    ) {
-      const attached = await attachOrderSubscription(tx, {
-        ord: existingOrder,
-        session,
-        provider,
-        paymentInfo: session.paymentInfo,
-      });
-      subscriptionNo = attached.subscriptionNo;
-      if (attached.created) createdSubscriptionNo = attached.subscriptionNo;
-    }
+      subscriptionNo &&
+        q
+          .update(order)
+          .set({
+            subscriptionNo,
+            subscriptionId: session.subscriptionId || ord.subscriptionId,
+          })
+          .where(eq(order.id, ord.id)),
+      grant && insertOnce(q, credit, grant),
+    ],
+  };
+}
 
-    const granted = await grantOrderCreditsOnce(tx, {
-      orderNo: existingOrder.orderNo,
-      userId: existingOrder.userId,
-      userEmail: existingOrder.userEmail,
-      subscriptionNo,
-      credits: existingOrder.creditsAmount,
-      transactionScene: isSubscriptionOrder(existingOrder)
-        ? 'subscription'
-        : 'payment',
-      description: 'Grant credit',
-      expiresAt: calculateCreditExpirationTime({
-        creditsValidDays: existingOrder.creditsValidDays || 0,
-        currentPeriodEnd: subscriptionInfo?.currentPeriodEnd,
+async function backfillPaidOrder(ord: any, session: any, provider: string) {
+  const plan = await planFulfillment(
+    ord,
+    session,
+    provider,
+    session.paymentInfo
+  );
+  try {
+    await atomic((q) => [
+      guard({
+        table: order,
+        column: 'userId',
+        where: eq(order.id, ord.id),
+        require: and(
+          eq(order.status, OrderStatus.PAID),
+          eq(order.paymentProvider, provider),
+          isNull(order.deletedAt)
+        )!,
+        message: 'Order no longer paid',
       }),
-    });
-    if (granted || createdSubscriptionNo) {
-      console.warn('[payment] backfilled paid order', {
-        orderNo: existingOrder.orderNo,
-        provider,
-        granted,
-        subscriptionNo: createdSubscriptionNo,
-      });
-    }
-  });
+      ...plan.steps(q),
+    ]);
+  } catch (error) {
+    if (!(error instanceof AtomicGuardError)) throw error;
+  }
 }
 
 // --- Checkout Success: update order + create subscription + grant credits ---
@@ -758,12 +768,23 @@ export async function handleCheckoutSuccess(session: any, provider: string) {
     .where(
       and(
         or(eq(order.paymentSessionId, sessionId), eq(order.orderNo, sessionId)),
+        eq(order.paymentProvider, provider),
         isNull(order.deletedAt)
       )
     )
     .limit(1);
 
   if (!existingOrder) return;
+  return settleCheckoutOrder(existingOrder, session, provider);
+}
+
+export async function settleCheckoutOrder(
+  existingOrder: any,
+  session: any,
+  provider: string
+) {
+  if (existingOrder.paymentProvider !== provider || existingOrder.deletedAt)
+    return;
 
   // Already paid (earlier callback/webhook, or admin release): don't fulfill
   // again, only backfill what that fulfillment missed (subscription payload
@@ -771,7 +792,17 @@ export async function handleCheckoutSuccess(session: any, provider: string) {
   // step is guarded so concurrent redeliveries apply it at most once.
   if (existingOrder.status === OrderStatus.PAID) {
     if (session.paymentStatus === PaymentStatus.SUCCESS) {
-      await backfillPaidOrder(existingOrder, session, provider);
+      const verdict = await verifyPaidAmount(existingOrder, session, provider);
+      if (!verdict.ok) {
+        if (verdict.reason === 'amount_unknown')
+          throw new PaymentAmountPendingError(existingOrder.orderNo);
+        return;
+      }
+      await backfillPaidOrder(
+        existingOrder,
+        { ...session, paymentInfo: verdict.info || session.paymentInfo },
+        provider
+      );
     }
     return;
   }
@@ -828,53 +859,31 @@ export async function handleCheckoutSuccess(session: any, provider: string) {
       discountAmount: paymentInfo?.discountAmount || null,
     };
 
-    // Claim-first: only the request whose conditional UPDATE moves the order
-    // created/pending → paid fulfills it; concurrent callers see 0 rows and
-    // return. D1 runs transaction(fn) as fn(db) and SQLite has no row locks,
-    // so the guarded UPDATE is the real mutex. On Postgres/MySQL the
-    // transaction also rolls the claim back if a later step throws (provider
-    // retries); on D1 a redelivery heals via backfillPaidOrder.
-    await db().transaction(async (tx: any) => {
-      const claim = await tx
-        .update(order)
-        .set(orderUpdate)
-        .where(
-          and(
-            eq(order.id, existingOrder.id),
-            inArray(order.status, [OrderStatus.CREATED, OrderStatus.PENDING])
-          )
-        );
-      if (paymentAffectedRows(claim) !== 1) return;
-
-      // 1. Create / link subscription (guarded by the order's empty slot)
-      let subscriptionNo = '';
-      if (subscriptionInfo && session.subscriptionId) {
-        const attached = await attachOrderSubscription(tx, {
-          ord: existingOrder,
-          session,
-          provider,
-          paymentInfo,
-        });
-        subscriptionNo = attached.subscriptionNo;
-      }
-
-      // 2. Grant credits (at most once per order)
-      await grantOrderCreditsOnce(tx, {
-        orderNo: existingOrder.orderNo,
-        userId: existingOrder.userId,
-        userEmail: existingOrder.userEmail,
-        subscriptionNo,
-        credits: existingOrder.creditsAmount,
-        transactionScene: isSubscriptionOrder(existingOrder)
-          ? 'subscription'
-          : 'payment',
-        description: 'Grant credit',
-        expiresAt: calculateCreditExpirationTime({
-          creditsValidDays: existingOrder.creditsValidDays || 0,
-          currentPeriodEnd: subscriptionInfo?.currentPeriodEnd,
+    const plan = await planFulfillment(
+      existingOrder,
+      session,
+      provider,
+      paymentInfo
+    );
+    try {
+      await atomic((q) => [
+        guard({
+          table: order,
+          column: 'userId',
+          where: eq(order.id, existingOrder.id),
+          require: and(
+            inArray(order.status, [OrderStatus.CREATED, OrderStatus.PENDING]),
+            eq(order.paymentProvider, provider),
+            isNull(order.deletedAt)
+          )!,
+          message: 'Order already settled',
         }),
-      });
-    });
+        q.update(order).set(orderUpdate).where(eq(order.id, existingOrder.id)),
+        ...plan.steps(q),
+      ]);
+    } catch (error) {
+      if (!(error instanceof AtomicGuardError)) throw error;
+    }
   } else if (
     session.paymentStatus === PaymentStatus.FAILED ||
     session.paymentStatus === PaymentStatus.CANCELED
@@ -915,56 +924,52 @@ async function handlePaymentRefunded(session: any, provider: string) {
     .limit(1);
   if (!existingOrder) return;
 
-  await db().transaction(async (tx: any) => {
-    const [lockedOrder] = await tx
-      .select()
-      .from(order)
-      .where(eq(order.id, existingOrder.id))
-      .limit(1)
-      .for('update');
-    if (!lockedOrder || lockedOrder.status !== OrderStatus.PAID) return;
-
-    // Conditional paid → failed: on D1/SQLite (no row locks) only one
-    // concurrent refund delivery wins and expires the credits below.
-    const claim = await tx
-      .update(order)
-      .set({
-        status: OrderStatus.FAILED,
-        paymentResult: JSON.stringify(session.paymentResult),
-      })
-      .where(
-        and(eq(order.id, lockedOrder.id), eq(order.status, OrderStatus.PAID))
-      );
-    if (paymentAffectedRows(claim) !== 1) return;
-
-    await tx
-      .update(credit)
-      .set({ remainingCredits: 0, status: 'expired' })
-      .where(
-        and(
-          eq(credit.orderNo, lockedOrder.orderNo),
-          eq(credit.transactionType, 'grant'),
-          eq(credit.status, 'active')
-        )
-      );
-
-    if (lockedOrder.subscriptionNo) {
-      await tx
+  try {
+    await atomic((q) => [
+      guard({
+        table: order,
+        column: 'userId',
+        where: eq(order.id, existingOrder.id),
+        require: eq(order.status, OrderStatus.PAID),
+        message: 'Refund already handled',
+      }),
+      q
+        .update(order)
+        .set({
+          status: OrderStatus.REFUNDED,
+          paymentResult: JSON.stringify(session.paymentResult),
+        })
+        .where(eq(order.id, existingOrder.id)),
+      q
         .update(credit)
         .set({ remainingCredits: 0, status: 'expired' })
         .where(
           and(
-            eq(credit.subscriptionNo, lockedOrder.subscriptionNo),
+            eq(credit.orderNo, existingOrder.orderNo),
             eq(credit.transactionType, 'grant'),
             eq(credit.status, 'active')
           )
-        );
-      await tx
-        .update(subscription)
-        .set({ status: SubscriptionStatus.CANCELED, canceledAt: new Date() })
-        .where(eq(subscription.subscriptionNo, lockedOrder.subscriptionNo));
-    }
-  });
+        ),
+      existingOrder.subscriptionNo &&
+        q
+          .update(credit)
+          .set({ remainingCredits: 0, status: 'expired' })
+          .where(
+            and(
+              eq(credit.subscriptionNo, existingOrder.subscriptionNo),
+              eq(credit.transactionType, 'grant'),
+              eq(credit.status, 'active')
+            )
+          ),
+      existingOrder.subscriptionNo &&
+        q
+          .update(subscription)
+          .set({ status: SubscriptionStatus.CANCELED, canceledAt: new Date() })
+          .where(eq(subscription.subscriptionNo, existingOrder.subscriptionNo)),
+    ]);
+  } catch (error) {
+    if (!(error instanceof AtomicGuardError)) throw error;
+  }
 }
 
 // --- Subscription Renewal ---
@@ -1025,88 +1030,100 @@ export async function handleSubscriptionRenewal(
     currentPeriodStart: subscriptionInfo.currentPeriodStart,
   });
 
-  await db().transaction(async (tx: any) => {
-    const [lockedSub] = await tx
-      .select()
-      .from(subscription)
-      .where(eq(subscription.subscriptionNo, existingSub.subscriptionNo))
-      .limit(1)
-      .for('update');
-    if (!lockedSub) return;
-
-    if (paymentInfo?.transactionId) {
-      const [dup] = await tx
-        .select({ id: order.id })
-        .from(order)
-        .where(
-          and(
-            eq(order.transactionId, paymentInfo.transactionId),
-            eq(order.paymentProvider, provider)
-          )
+  const periodStart = new Date(subscriptionInfo.currentPeriodStart);
+  const periodEnd = new Date(subscriptionInfo.currentPeriodEnd);
+  if (
+    !Number.isFinite(+periodStart) ||
+    !Number.isFinite(+periodEnd) ||
+    periodEnd <= periodStart
+  )
+    throw new Error('Invalid subscription period');
+  const verdict = await verifyPaidAmount(
+    { ...existingSub, orderNo: renewalOrderNo, paymentType: 'renew' },
+    session,
+    provider
+  );
+  if (!verdict.ok) {
+    if (verdict.reason === 'amount_unknown')
+      throw new PaymentAmountPendingError(renewalOrderNo);
+    throw new Error('Renewal payment amount or currency does not match');
+  }
+  if (paymentInfo?.transactionId) {
+    const [duplicate] = await db()
+      .select({ id: order.id })
+      .from(order)
+      .where(
+        and(
+          eq(order.transactionId, paymentInfo.transactionId),
+          eq(order.paymentProvider, provider)
         )
-        .limit(1);
-      if (dup) return;
-    }
-
-    // 1. Create renewal order (claim: 0 rows = already recorded)
-    const inserted = await insertIgnoringConflict(tx, order, {
-      id: renewalOrderId,
-      orderNo: renewalOrderNo,
-      userId: existingSub.userId,
-      userEmail: existingSub.userEmail || '',
-      status: OrderStatus.PAID,
-      amount: existingSub.amount,
-      currency: existingSub.currency,
-      productId: existingSub.productId || '',
-      paymentType: 'renew',
-      paymentInterval: existingSub.interval || '',
-      paymentProvider: provider,
-      checkoutInfo: '',
-      description: 'Subscription Renewal',
-      productName: existingSub.productName || '',
-      planName: existingSub.planName || '',
-      creditsAmount: existingSub.creditsAmount,
-      creditsValidDays: existingSub.creditsValidDays,
-      paymentProductId: existingSub.paymentProductId || '',
-      paymentResult: JSON.stringify(session.paymentResult),
-      paymentAmount: paymentInfo?.paymentAmount,
-      paymentCurrency: paymentInfo?.paymentCurrency,
-      paymentEmail: paymentInfo?.paymentEmail,
-      paidAt: paymentInfo?.paidAt || new Date(),
-      invoiceId: paymentInfo?.invoiceId,
-      invoiceUrl: paymentInfo?.invoiceUrl,
-      subscriptionNo: existingSub.subscriptionNo,
-      subscriptionId: session.subscriptionId,
-      transactionId: paymentInfo?.transactionId,
-      paymentUserName: paymentInfo?.paymentUserName,
-      paymentUserId: paymentInfo?.paymentUserId,
-    });
-    if (inserted !== 1) return;
-
-    // 2. Update subscription period
-    await tx
-      .update(subscription)
-      .set({
-        currentPeriodStart: subscriptionInfo.currentPeriodStart,
-        currentPeriodEnd: subscriptionInfo.currentPeriodEnd,
-      })
-      .where(eq(subscription.subscriptionNo, existingSub.subscriptionNo));
-
-    // 3. Grant credits for renewal (at most once per renewal order)
-    await grantOrderCreditsOnce(tx, {
-      orderNo: renewalOrderNo,
-      userId: existingSub.userId,
-      userEmail: existingSub.userEmail,
-      subscriptionNo: existingSub.subscriptionNo,
-      credits: existingSub.creditsAmount,
-      transactionScene: 'renewal',
-      description: 'Grant credit',
-      expiresAt: calculateCreditExpirationTime({
-        creditsValidDays: existingSub.creditsValidDays || 0,
-        currentPeriodEnd: subscriptionInfo.currentPeriodEnd,
+      )
+      .limit(1);
+    if (duplicate) return;
+  }
+  const renewalOrder = {
+    id: renewalOrderId,
+    orderNo: renewalOrderNo,
+    userId: existingSub.userId,
+    userEmail: existingSub.userEmail || '',
+    status: OrderStatus.PAID,
+    amount: existingSub.amount,
+    currency: existingSub.currency,
+    productId: existingSub.productId || '',
+    paymentType: 'renew',
+    paymentInterval: existingSub.interval || '',
+    paymentProvider: provider,
+    checkoutInfo: '',
+    description: 'Subscription Renewal',
+    productName: existingSub.productName || '',
+    planName: existingSub.planName || '',
+    creditsAmount: existingSub.creditsAmount,
+    creditsValidDays: existingSub.creditsValidDays,
+    paymentProductId: existingSub.paymentProductId || '',
+    paymentResult: JSON.stringify(session.paymentResult),
+    paymentAmount: paymentInfo?.paymentAmount,
+    paymentCurrency: paymentInfo?.paymentCurrency,
+    paymentEmail: paymentInfo?.paymentEmail,
+    paidAt: paymentInfo?.paidAt || new Date(),
+    invoiceId: paymentInfo?.invoiceId,
+    invoiceUrl: paymentInfo?.invoiceUrl,
+    subscriptionNo: existingSub.subscriptionNo,
+    subscriptionId: session.subscriptionId,
+    transactionId: paymentInfo?.transactionId,
+    paymentUserName: paymentInfo?.paymentUserName,
+    paymentUserId: paymentInfo?.paymentUserId,
+  };
+  const plan = await planFulfillment(
+    renewalOrder,
+    session,
+    provider,
+    paymentInfo
+  );
+  try {
+    await atomic((q) => [
+      guard({
+        table: subscription,
+        column: 'userId',
+        where: eq(subscription.id, existingSub.id),
+        require: and(
+          isNull(subscription.deletedAt),
+          or(
+            isNull(subscription.currentPeriodStart),
+            lt(subscription.currentPeriodStart, periodStart)
+          )
+        )!,
+        message: 'Subscription period already renewed',
       }),
-    });
-  });
+      q.insert(order).values(renewalOrder),
+      q
+        .update(subscription)
+        .set({ currentPeriodStart: periodStart, currentPeriodEnd: periodEnd })
+        .where(eq(subscription.id, existingSub.id)),
+      ...plan.steps(q),
+    ]);
+  } catch (error) {
+    if (!(error instanceof AtomicGuardError)) throw error;
+  }
 }
 
 // --- Subscription Updated ---

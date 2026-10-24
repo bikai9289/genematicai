@@ -239,6 +239,7 @@ describe('PayPal currency minor units', () => {
     // ISO gives HUF/TWD 2 decimals but PayPal accepts none
     expect(toPayPalAmountValue(150000, 'HUF')).toBe('1500');
     expect(toPayPalAmountValue(30000, 'TWD')).toBe('300');
+    expect(() => toPayPalAmountValue(150001, 'HUF')).toThrow('whole-unit');
     expect(toPayPalAmountValue(1234, 'KWD')).toBe('1.234');
     expect(toPayPalAmountValue(0, 'USD')).toBe('0.00');
     expect(toPayPalAmountValue(0, 'JPY')).toBe('0');

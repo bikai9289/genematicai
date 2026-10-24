@@ -60,6 +60,9 @@ export const Route = createFileRoute('/sitemap.xml')({
           lastModified: [
             '',
             '/pricing',
+            '/privacy-policy',
+            '/terms-of-service',
+            '/ai-dance-video-generator',
             '/ai-image-generator',
             '/ai-video-generator',
             '/posts',

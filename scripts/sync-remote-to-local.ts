@@ -32,7 +32,7 @@ function toNullableStr(val: any): string | null {
 
 async function sync() {
   console.log('🔄 Connecting to remote database...');
-  const sql = postgres(REMOTE_URL, {
+  const sql = postgres(REMOTE_URL!, {
     ssl: { rejectUnauthorized: false },
     connect_timeout: 10,
     max: 2,

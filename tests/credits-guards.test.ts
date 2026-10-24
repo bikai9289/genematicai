@@ -35,7 +35,8 @@ const { consume, getBalance, grant, revoke } =
   await import('../src/modules/credits/service');
 
 after(async () => {
-  await rm(directory, { recursive: true, force: true });
+  db().$client.close();
+  await rm(directory, { recursive: true, force: true, maxRetries:10,retryDelay:100 });
 });
 
 const userId = 'user-credits';

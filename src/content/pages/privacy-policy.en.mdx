@@ -2,7 +2,7 @@ export const meta = {
   title: 'Privacy Policy',
   description:
     'How we collect, use, process, and safeguard your personal information and creative data.',
-  updated_at: '2026-10-22',
+  updated_at: '2026-10-24',
 };
 
 ## 1. Introduction
@@ -27,7 +27,7 @@ We process your data for the following legitimate purposes:
 
 - **Service Delivery & Media Generation** — To process your prompts and media inputs through our AI pipeline and deliver generated images and videos.
 - **Account & Credit Management** — To track credit balances, record transaction history, and manage your account lifecycle.
-- **Safety, Compliance & Content Moderation** — To detect and prevent abusive, fraudulent, or harmful activities, enforce our acceptable use policies, operate automated and manual content moderation workflows, investigate user-submitted violation reports, and preserve evidence to comply with mandatory reporting obligations (including CSAM reporting to NCMEC and relevant law enforcement).
+- **Upload Screening** — We send reference images to Google Cloud Vision SafeSearch to screen for adult and violent content before storing new uploads. This is not an age, consent, ownership, or CSAM determination. Model providers may also reject content during generation; this does not establish independent review of every generated output.
 - **Customer Support & Communications** — To respond to your technical inquiries, notify you of system updates, and deliver essential account notifications.
 - **Quality Optimization** — To analyze aggregated usage trends and improve model latency, rendering performance, and user experience.
 
@@ -35,9 +35,11 @@ We process your data for the following legitimate purposes:
 
 To provide state-of-the-art AI generation capabilities, we interface with specialized AI infrastructure and cloud compute providers.
 
-- Your prompt texts and reference assets are securely transmitted to authorized processing nodes solely for the purpose of executing your generation requests.
+- Your prompts and reference assets are securely transmitted to providers for the requested generation and upload-screening operations described here.
 - We do **not** sell your personal data or user-submitted creative assets to third parties.
 - Private creations and uploaded assets are strictly protected under access controls and are not made public unless you explicitly choose public visibility.
+
+New uploads are stored in a private Cloudflare R2 bucket. Our server checks ownership for browser access and issues one-hour read links for the generation provider. Images are also sent securely to Google for upload screening. Providers process data under their own terms and retention policies. Older public assets are not automatically deleted or made private by this update; contact support if an older link needs to be removed.
 
 ## 5. Data Storage and Retention
 

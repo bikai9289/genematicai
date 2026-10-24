@@ -178,10 +178,10 @@ export const Route = createRootRoute({
           name: appName,
           url: appUrl,
           logo: `${appUrl}/logo.png?v=3`,
-          sameAs: [],
         },
         {
           '@type': 'SoftwareApplication',
+          '@id': `${appUrl}/#application`,
           name: appName,
           applicationCategory: 'MultimediaApplication',
           operatingSystem: 'All',

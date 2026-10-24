@@ -123,7 +123,10 @@ export function Hero() {
               ],
             ] as const
           ).map(([value, label]) => (
-            <div key={label} className="flex items-baseline gap-2">
+            <div
+              key={label}
+              className="flex max-w-full flex-wrap items-baseline justify-center gap-x-2"
+            >
               <dt className="text-foreground font-semibold">{value}</dt>
               <dd className="text-muted-foreground">{label}</dd>
             </div>

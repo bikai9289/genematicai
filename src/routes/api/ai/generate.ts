@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import {
   AITaskStatus,
@@ -10,17 +10,28 @@ import {
 } from '@/core/ai/types';
 import { getAuth } from '@/core/auth';
 import { db } from '@/core/db';
-import { atomic, AtomicGuardError } from '@/core/db/atomic';
+import { atomic, AtomicGuardError, guard } from '@/core/db/atomic';
+import { MediaPolicyError } from '@/core/moderation/safe-search';
+import { authorizeReference } from '@/core/storage/private';
 import { envConfigs } from '@/config';
 import { aiTask } from '@/config/db/schema';
-import { expireTimedOutTasks } from '@/modules/ai-tasks/service';
+import {
+  AITaskStatus as DatabaseTaskStatus,
+  expireTimedOutTasks,
+  updateTask,
+} from '@/modules/ai-tasks/service';
 import {
   createMockGenerateResult,
   generateMedia,
   getActiveAIProvider,
 } from '@/modules/ai/service';
 import { getConfig, isMockMode } from '@/modules/config/service';
-import { getBalance, planConsume, revoke } from '@/modules/credits/service';
+import {
+  getBalance,
+  planConsume,
+  planRevoke,
+  revoke,
+} from '@/modules/credits/service';
 import { getUserPlan } from '@/modules/invite-codes/service';
 import { hasPermission } from '@/modules/rbac/service';
 import { createAIWebhookToken } from '@/lib/ai-webhook';
@@ -105,6 +116,7 @@ async function POST({ request }: { request: Request }) {
     const effectiveMode = mode || scene || rawOptions?.mode;
     const options =
       rawOptions && typeof rawOptions === 'object' ? { ...rawOptions } : {};
+    options.visibility = options.visibility === 'public' ? 'public' : 'private';
     delete options.image_url;
     delete options.image_urls;
     delete options.image_input;
@@ -219,6 +231,18 @@ async function POST({ request }: { request: Request }) {
       normalizedImageUrls.length > getModelMaxImages(model, selectedModel.type)
     ) {
       return respErr('Too many input images for this model');
+    }
+    // Own, screened input only. Sign for provider reads before taking any credits.
+    const providerImageUrls = await Promise.all(
+      normalizedImageUrls.map((url) => authorizeReference(url, session.user.id))
+    );
+    const providerOptions = { ...options };
+    for (const field of ['first_frame_image', 'last_frame_image']) {
+      if (typeof options[field] === 'string' && options[field])
+        providerOptions[field] = await authorizeReference(
+          options[field],
+          session.user.id
+        );
     }
     // Persist validated reference images for admin/detail (client-supplied keys were stripped above)
     if (normalizedImageUrls.length > 0) {
@@ -438,9 +462,9 @@ async function POST({ request }: { request: Request }) {
               mediaType,
               prompt,
               model,
-              options,
-              imageUrl: normalizedImageUrls[0],
-              imageUrls: normalizedImageUrls,
+              options: providerOptions,
+              imageUrl: providerImageUrls[0],
+              imageUrls: providerImageUrls,
               callbackUrl: callbackUrlObj.toString(),
             },
             provider!
@@ -462,29 +486,40 @@ async function POST({ request }: { request: Request }) {
 
       if (dbTaskId) {
         try {
-          if (isFailed && consumedCreditId) {
-            await revoke(consumedCreditId);
-            consumedCreditId = null;
+          const refund =
+            isFailed && consumedCreditId
+              ? await planRevoke(consumedCreditId)
+              : undefined;
+          const updates = {
+            taskId: isFinished ? null : result.taskId || null,
+            status: isFinished
+              ? 'success'
+              : result.taskStatus === AITaskStatus.CANCELED
+                ? 'canceled'
+                : isFailed
+                  ? 'failed'
+                  : 'processing',
+            taskInfo: result.taskInfo ? JSON.stringify(result.taskInfo) : null,
+            taskResult: JSON.stringify(result),
+            activeSlot: isFinished || isFailed ? null : undefined,
+            creditId: isFailed ? null : undefined,
+          };
+          try {
+            await atomic((q) => [
+              guard({
+                table: aiTask,
+                column: 'userId',
+                where: eq(aiTask.id, dbTaskId!),
+                require: inArray(aiTask.status, ['pending', 'processing']),
+                message: 'Task already finished',
+              }),
+              q.update(aiTask).set(updates).where(eq(aiTask.id, dbTaskId!)),
+              ...(refund?.steps(q) || []),
+            ]);
+            if (isFailed) consumedCreditId = null;
+          } catch (error) {
+            if (!(error instanceof AtomicGuardError)) throw error;
           }
-          await db()
-            .update(aiTask)
-            .set({
-              taskId: isFinished ? null : result.taskId || null,
-              status: isFinished
-                ? 'success'
-                : result.taskStatus === AITaskStatus.CANCELED
-                  ? 'canceled'
-                  : isFailed
-                    ? 'failed'
-                    : 'processing',
-              taskInfo: result.taskInfo
-                ? JSON.stringify(result.taskInfo)
-                : null,
-              taskResult: JSON.stringify(result),
-              activeSlot: isFinished || isFailed ? null : undefined,
-              creditId: isFailed ? null : undefined,
-            })
-            .where(eq(aiTask.id, dbTaskId));
         } catch (dbUpdateErr) {
           console.error('Failed to update aiTask status:', dbUpdateErr);
         }
@@ -510,42 +545,29 @@ async function POST({ request }: { request: Request }) {
         remainingBalance,
       });
     } catch (generateErr: any) {
-      // Rollback consumed credits immediately on generation error!
-      if (consumedCreditId) {
-        try {
-          await revoke(consumedCreditId);
-          consumedCreditId = null;
-        } catch (revokeErr) {
-          console.error(
-            'Failed to revoke credits after AI generation error:',
-            revokeErr
-          );
-        }
+      try {
+        if (dbTaskId)
+          await updateTask({
+            taskId: dbTaskId,
+            status: DatabaseTaskStatus.FAILED,
+            taskResult: {
+              error: getPublicTaskErrorCode(
+                generateErr?.message || generateErr
+              ),
+            },
+          });
+        else if (consumedCreditId) await revoke(consumedCreditId);
+      } catch (refundError) {
+        // The task remains non-terminal if its atomic refund fails; timeout recovery can retry.
+        console.error('AI failure/refund write failed');
       }
-
-      if (dbTaskId) {
-        try {
-          await db()
-            .update(aiTask)
-            .set({
-              status: 'failed',
-              activeSlot: null,
-              creditId: consumedCreditId ? undefined : null,
-              taskResult: JSON.stringify({
-                error: generateErr?.message || 'Generation failed',
-              }),
-            })
-            .where(eq(aiTask.id, dbTaskId));
-        } catch (dbFailErr) {
-          console.error('Failed to mark aiTask failed:', dbFailErr);
-        }
-      }
-
       throw new Error(
         getPublicTaskErrorCode(generateErr?.message || generateErr)
       );
     }
   } catch (error: any) {
+    if (error instanceof MediaPolicyError)
+      return respErr(error.code, { status: error.status });
     console.error('AI generation request failed:', error);
     return respErr(sanitizeUserErrorMessage(error?.message));
   }

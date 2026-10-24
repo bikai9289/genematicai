@@ -94,7 +94,8 @@ before(async () => {
     ]);
 });
 after(async () => {
-  await rm(directory, { recursive: true, force: true });
+  db().$client.close();
+  await rm(directory, { recursive: true, force: true, maxRetries:10,retryDelay:100 });
 });
 
 test('refund deducts the order grant first, marks the order refunded and cannot run twice', async () => {

@@ -30,10 +30,6 @@ export const Route = createFileRoute('/posts/')({
       meta: [
         { title },
         { name: 'description', content: description },
-        {
-          name: 'keywords',
-          content: `AI blog, tutorials, guides, AI video, AI image, ${envConfigs.app_name}`,
-        },
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: title },
         { property: 'og:description', content: description },

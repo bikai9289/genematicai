@@ -1,10 +1,9 @@
 import { and, desc, eq, inArray, isNull, lt } from 'drizzle-orm';
 
 import { db } from '@/core/db';
-import { atomic, AtomicGuardError } from '@/core/db/atomic';
-import { envConfigs } from '@/config';
+import { atomic, AtomicGuardError, guard } from '@/core/db/atomic';
 import { aiTask, credit } from '@/config/db/schema';
-import { planConsume, revoke } from '@/modules/credits/service';
+import { planConsume, planRevoke } from '@/modules/credits/service';
 import { getUuid } from '@/lib/hash';
 
 export enum AITaskStatus {
@@ -17,89 +16,72 @@ export enum AITaskStatus {
 
 const NON_TERMINAL_STATUSES = [AITaskStatus.PENDING, AITaskStatus.PROCESSING];
 
+async function taskRevokePlan(task: any) {
+  let creditId = task.creditId;
+  if (!creditId && task.taskInfo) {
+    try {
+      creditId = JSON.parse(task.taskInfo).creditId;
+    } catch {
+      /* legacy malformed metadata: use the consumption lookup below */
+    }
+  }
+  if (!creditId && task.costCredits > 0) {
+    const [record] = await db()
+      .select({ id: credit.id })
+      .from(credit)
+      .where(
+        and(
+          eq(credit.userId, task.userId),
+          eq(credit.transactionType, 'consume'),
+          eq(credit.metadata, JSON.stringify({ taskId: task.id }))
+        )
+      )
+      .limit(1);
+    creditId = record?.id;
+  }
+  return creditId ? planRevoke(creditId) : undefined;
+}
+
 export async function expireTaskIfNeeded(
   taskId: string,
   timeoutMs = 20 * 60 * 1000
 ) {
-  if (envConfigs.database_provider === 'd1') {
-    const deadline = new Date(Date.now() - timeoutMs);
-    const [expiredTask] = await db()
-      .update(aiTask)
-      .set({ status: AITaskStatus.FAILED, activeSlot: null })
-      .where(
-        and(
-          eq(aiTask.id, taskId),
+  const [task] = await db()
+    .select()
+    .from(aiTask)
+    .where(eq(aiTask.id, taskId))
+    .limit(1);
+  if (
+    !task ||
+    task.deletedAt ||
+    !NON_TERMINAL_STATUSES.includes(task.status as AITaskStatus) ||
+    Date.now() - new Date(task.createdAt).getTime() <= timeoutMs
+  )
+    return false;
+  const plan = await taskRevokePlan(task);
+  try {
+    await atomic((q) => [
+      guard({
+        table: aiTask,
+        column: 'userId',
+        where: eq(aiTask.id, taskId),
+        require: and(
           inArray(aiTask.status, NON_TERMINAL_STATUSES),
-          isNull(aiTask.deletedAt),
-          lt(aiTask.createdAt, deadline)
-        )
-      )
-      .returning({ creditId: aiTask.creditId, userId: aiTask.userId });
-
-    if (!expiredTask) return false;
-
-    let creditIdToRevoke = expiredTask.creditId;
-    if (!creditIdToRevoke) {
-      const [record] = await db()
-        .select({ id: credit.id })
-        .from(credit)
-        .where(
-          and(
-            eq(credit.userId, expiredTask.userId),
-            eq(credit.transactionType, 'consume'),
-            eq(credit.metadata, JSON.stringify({ taskId }))
-          )
-        )
-        .limit(1);
-      if (record) creditIdToRevoke = record.id;
-    }
-    if (creditIdToRevoke) await revoke(creditIdToRevoke);
+          isNull(aiTask.deletedAt)
+        )!,
+        message: 'Task already finished',
+      }),
+      q
+        .update(aiTask)
+        .set({ status: AITaskStatus.FAILED, activeSlot: null })
+        .where(eq(aiTask.id, taskId)),
+      ...(plan?.steps(q) || []),
+    ]);
     return true;
+  } catch (error) {
+    if (error instanceof AtomicGuardError) return false;
+    throw error;
   }
-
-  // revoke() is its own atomic write (D1-safe), so run it after the tx.
-  let pendingRevoke: string | undefined;
-  const expired = await db().transaction(async (tx: any) => {
-    const q = tx.select().from(aiTask).where(eq(aiTask.id, taskId)).limit(1);
-    const [task] = await (typeof (q as any).for === 'function'
-      ? (q as any).for('update')
-      : q);
-
-    if (
-      !task ||
-      task.deletedAt ||
-      !NON_TERMINAL_STATUSES.includes(task.status as AITaskStatus) ||
-      Date.now() - new Date(task.createdAt).getTime() <= timeoutMs
-    ) {
-      return false;
-    }
-
-    await tx
-      .update(aiTask)
-      .set({ status: AITaskStatus.FAILED, activeSlot: null })
-      .where(eq(aiTask.id, task.id));
-
-    let creditIdToRevoke = task.creditId;
-    if (!creditIdToRevoke && task.costCredits > 0) {
-      const [record] = await tx
-        .select({ id: credit.id })
-        .from(credit)
-        .where(
-          and(
-            eq(credit.userId, task.userId),
-            eq(credit.transactionType, 'consume'),
-            eq(credit.metadata, JSON.stringify({ taskId: task.id }))
-          )
-        )
-        .limit(1);
-      if (record) creditIdToRevoke = record.id;
-    }
-
-    if (creditIdToRevoke) pendingRevoke = creditIdToRevoke;
-    return true;
-  });
-  if (pendingRevoke) await revoke(pendingRevoke);
-  return expired;
 }
 
 export async function expireTimedOutTasks(limit = 100, userId?: string) {
@@ -223,19 +205,29 @@ export async function updateTask(params: {
     updateData.taskResult = JSON.stringify(taskResult);
   }
 
-  await db().update(aiTask).set(updateData).where(eq(aiTask.id, taskId));
-
-  // Revoke credits on failure
-  if (status === AITaskStatus.FAILED || status === AITaskStatus.CANCELED) {
-    try {
-      const info = task.taskInfo ? JSON.parse(task.taskInfo as string) : {};
-      const creditId = task.creditId || info.creditId;
-      if (creditId) {
-        await revoke(creditId);
-      }
-    } catch {
-      // Ignore parse errors
-    }
+  // Terminal transitions and their refund must commit together on every backend.
+  if (!NON_TERMINAL_STATUSES.includes(task.status as AITaskStatus)) return;
+  const plan =
+    status === AITaskStatus.FAILED || status === AITaskStatus.CANCELED
+      ? await taskRevokePlan(task)
+      : undefined;
+  try {
+    await atomic((q) => [
+      guard({
+        table: aiTask,
+        column: 'userId',
+        where: eq(aiTask.id, taskId),
+        require: and(
+          inArray(aiTask.status, NON_TERMINAL_STATUSES),
+          isNull(aiTask.deletedAt)
+        )!,
+        message: 'Task already finished',
+      }),
+      q.update(aiTask).set(updateData).where(eq(aiTask.id, taskId)),
+      ...(plan?.steps(q) || []),
+    ]);
+  } catch (error) {
+    if (!(error instanceof AtomicGuardError)) throw error;
   }
 }
 

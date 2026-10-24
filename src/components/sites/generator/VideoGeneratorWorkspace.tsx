@@ -33,6 +33,7 @@ const isImageReferenceUrl = (value: unknown): value is string =>
   !/\.(mp4|webm|mov|m4v)(?:$|[?#])/i.test(value.trim());
 
 export interface VideoGeneratorWorkspaceProps {
+  initialMode?: 'text-to-video' | 'image-to-video';
   previewTitle?: string;
   previewDescription?: string;
   search?: {
@@ -43,6 +44,7 @@ export interface VideoGeneratorWorkspaceProps {
 }
 
 export function VideoGeneratorWorkspace({
+  initialMode = 'text-to-video',
   search,
   previewTitle,
   previewDescription,
@@ -59,7 +61,7 @@ export function VideoGeneratorWorkspace({
 
   const [activeTab, setActiveTab] = useState<
     'text-to-video' | 'image-to-video'
-  >('text-to-video');
+  >(initialMode);
   const [prompt, setPrompt] = useState(search?.prompt || '');
   const [selectedModelId, setSelectedModelId] = useState<string>(() => {
     if (search?.model && AI_MODELS[search.model]?.type === 'video') {

@@ -76,6 +76,7 @@ export const envConfigs: Record<string, string> = {
   inline_image_max_kb: procEnv.INLINE_IMAGE_MAX_KB ?? '5120',
 
   // AI
+  google_cloud_vision_api_key: procEnv.GOOGLE_CLOUD_VISION_API_KEY ?? '',
   // Additional provider settings are resolved from the deployment environment
   // by modules/config/environment.ts; they are never exposed wholesale to clients.
   replicate_api_token: procEnv.REPLICATE_API_TOKEN ?? '',

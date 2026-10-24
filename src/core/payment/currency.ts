@@ -9,6 +9,10 @@ export function currencyMinorDigits(currency?: string | null): number {
     .trim()
     .toUpperCase();
   if (!code) return 2;
+  // CLDR display precision can differ from our ISO ledger units (and changes
+  // across Node/ICU versions). PayPal's whole-unit HUF/TWD wire format must
+  // not change how stored order amounts are denominated.
+  if (code === 'HUF' || code === 'TWD') return 2;
   try {
     return (
       new Intl.NumberFormat('en-US', {

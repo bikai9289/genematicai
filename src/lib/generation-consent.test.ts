@@ -38,6 +38,26 @@ describe('generation consent boundary', () => {
     getBalance.mockClear();
     getProvider.mockClear();
   });
+  it('rejects an unowned external reference before checking or consuming credits', async () => {
+    getProvider.mockResolvedValue({ name: 'kie' });
+    const response = await (Route as any).server.handlers.POST({
+      request: new Request('https://example.com/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaType: 'video',
+          model: 'seedance-2-5',
+          prompt: 'A slow camera pan',
+          imageUrls: ['https://example.com/unowned.png'],
+          options: { media_consent: true },
+        }),
+      }),
+    });
+    expect((await response.json()).message).toContain(
+      'MEDIA_REUPLOAD_REQUIRED'
+    );
+    expect(getBalance).not.toHaveBeenCalled();
+  });
   it('rejects concurrent unconfirmed references before balance or provider access', async () => {
     const results = await Promise.all(
       [undefined, false, 'true'].map(async (consent) => {

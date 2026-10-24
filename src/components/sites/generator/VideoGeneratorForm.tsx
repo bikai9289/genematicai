@@ -195,7 +195,7 @@ export function VideoGeneratorForm({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={handleImageSelect}
               />
@@ -238,7 +238,7 @@ export function VideoGeneratorForm({
                   <input
                     ref={endFileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     className="hidden"
                     onChange={handleEndImageSelect}
                   />
@@ -262,8 +262,6 @@ export function VideoGeneratorForm({
                 models={activeModels}
                 value={selectedModelId}
                 onChange={setSelectedModelId}
-                duration={duration}
-                resolution={resolution}
                 className="h-8 min-w-0 flex-1 sm:h-9 sm:min-w-[160px]"
               />
               <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold">

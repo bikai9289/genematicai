@@ -30,11 +30,20 @@ execFileSync(
 const { db } = await import('../src/core/db');
 const { credit, order, subscription, user } =
   await import('../src/config/db/schema');
-const { settleCheckoutOrder, handleSubscriptionRenewal } =
-  await import('../src/modules/payment/service');
+const {
+  settleCheckoutOrder,
+  handleSubscriptionRenewal,
+  handleCheckoutSuccess,
+} = await import('../src/modules/payment/service');
 
 after(async () => {
-  await rm(directory, { recursive: true, force: true });
+  db().$client.close();
+  await rm(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 });
 
 const userId = 'user-1';
@@ -69,7 +78,12 @@ function checkoutSession(sessionId: string, status = 'paid') {
   return {
     paymentStatus: status,
     paymentResult: { id: sessionId },
-    paymentInfo: { transactionId: `pi_${sessionId}`, paidAt: start },
+    paymentInfo: {
+      paymentAmount: 2900,
+      paymentCurrency: 'usd',
+      transactionId: `pi_${sessionId}`,
+      paidAt: start,
+    },
     subscriptionId: `sub_${sessionId}`,
     subscriptionResult: {},
     subscriptionInfo: {
@@ -131,6 +145,47 @@ test('a late failure event from a stale read never downgrades a paid order', asy
   assert.equal((await readOrder('ORD-RACE')).status, 'paid');
 });
 
+test('a verified replay repairs a legacy paid order once, but another provider cannot repair it', async () => {
+  await createOrder('ORD-REPAIR', 'cs_repair');
+  await db()
+    .update(order)
+    .set({ status: 'paid' })
+    .where(eq(order.orderNo, 'ORD-REPAIR'));
+  await handleCheckoutSuccess(checkoutSession('cs_repair'), 'paypal');
+  assert.equal(
+    (await db().select().from(credit).where(eq(credit.orderNo, 'ORD-REPAIR')))
+      .length,
+    0
+  );
+  await Promise.all(
+    Array.from({ length: 3 }, () =>
+      handleCheckoutSuccess(checkoutSession('cs_repair'), 'stripe')
+    )
+  );
+  assert.equal(
+    (await db().select().from(credit).where(eq(credit.orderNo, 'ORD-REPAIR')))
+      .length,
+    1
+  );
+});
+
+test('an underpaid subscription checkout cannot grant subscription credits', async () => {
+  await createOrder('ORD-UNDERPAID', 'cs_underpaid');
+  const session = checkoutSession('cs_underpaid');
+  session.paymentInfo.paymentAmount = 1;
+  await handleCheckoutSuccess(session, 'stripe');
+  assert.equal((await readOrder('ORD-UNDERPAID')).status, 'abnormal');
+  assert.equal(
+    (
+      await db()
+        .select()
+        .from(credit)
+        .where(eq(credit.orderNo, 'ORD-UNDERPAID'))
+    ).length,
+    0
+  );
+});
+
 test('duplicate renewal deliveries for one period create one renewal order and one grant', async () => {
   const [sub] = await db()
     .select()
@@ -140,7 +195,12 @@ test('duplicate renewal deliveries for one period create one renewal order and o
   const renewal = (transactionId: string) => ({
     paymentStatus: 'paid',
     paymentResult: { id: 'in_renew' },
-    paymentInfo: { transactionId, paidAt: nextStart },
+    paymentInfo: {
+      paymentAmount: 2900,
+      paymentCurrency: 'usd',
+      transactionId,
+      paidAt: nextStart,
+    },
     subscriptionId: 'sub_cs_race',
     subscriptionInfo: {
       currentPeriodStart: nextStart,

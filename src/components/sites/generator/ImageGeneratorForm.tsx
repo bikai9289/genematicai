@@ -167,7 +167,7 @@ export function ImageGeneratorForm({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={handleImageSelect}
             />

@@ -43,7 +43,13 @@ before(async () => {
     .values({ id: 'u1', name: 'A', email: 'a@example.test' });
 });
 after(async () => {
-  await rm(directory, { recursive: true, force: true });
+  db().$client.close();
+  await rm(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 });
 
 async function createdOrder(orderNo: string, provider: string, amount: number) {
@@ -68,21 +74,24 @@ async function createdOrder(orderNo: string, provider: string, amount: number) {
 }
 const success = (orderNo: string, amount: number) => ({
   paymentStatus: 'paid',
-  paymentInfo: { amount, transactionId: `T-${orderNo}` },
+  paymentInfo: {
+    amount,
+    currency: 'cny',
+    paymentAmount: amount,
+    paymentCurrency: 'cny',
+    transactionId: `T-${orderNo}`,
+  },
   paymentResult: { out_trade_no: orderNo },
 });
 
 test('a CNY notification whose amount differs from the order is refused and grants nothing', async () => {
   const order = await createdOrder('ORD-MISMATCH', 'alipay', 9900);
-  await assert.rejects(
-    settleCheckoutOrder(order, success('ORD-MISMATCH', 1), 'alipay'),
-    /does not match/
-  );
+  await settleCheckoutOrder(order, success('ORD-MISMATCH', 1), 'alipay');
   const [row] = await db()
     .select()
     .from(schema.order)
     .where(eq(schema.order.orderNo, 'ORD-MISMATCH'));
-  assert.equal(row.status, 'created');
+  assert.equal(row.status, 'abnormal');
   const credits = await db()
     .select()
     .from(schema.credit)

@@ -76,7 +76,6 @@ export const Route = createFileRoute('/posts/$slug')({
       meta: [
         { title: `${post.title} - ${appName}` },
         { name: 'description', content: post.description },
-        { name: 'keywords', content: `${post.tag}, AI, ${appName}, guide` },
         { property: 'og:type', content: 'article' },
         { property: 'og:title', content: post.title },
         { property: 'og:description', content: post.description },

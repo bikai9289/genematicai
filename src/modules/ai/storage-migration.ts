@@ -2,10 +2,16 @@ import { and, desc, eq, gte, isNull } from 'drizzle-orm';
 
 import { extractAudioUrl, extractMediaUrl } from '@/core/ai';
 import { db } from '@/core/db';
+import {
+  hasPrivateBucket,
+  mediaKey,
+  privateBucket,
+  privateMediaUrl,
+} from '@/core/storage/private';
 import { aiTask } from '@/config/db/schema';
 import { getAllConfigs, type ConfigMap } from '@/modules/config/service';
 import { getStorage } from '@/modules/storage/service';
-import { getUuid } from '@/lib/hash';
+import { getUuid, md5 } from '@/lib/hash';
 
 export interface StorageMediaItem {
   sourceUrl: string;
@@ -90,7 +96,9 @@ function trimTrailingSlash(value: string): string {
 }
 
 function getManagedStoragePrefixes(configs: ConfigMap): string[] {
-  const prefixes: string[] = [];
+  const prefixes: string[] = [
+    `${String(configs.app_url || '').replace(/\/+$/, '')}/api/storage/private?`,
+  ];
   const uploadPath = String(configs.r2_upload_path || 'uploads').replace(
     /^\/+|\/+$/g,
     ''
@@ -304,8 +312,9 @@ export async function migrateAITaskToR2(taskId: string, configs?: ConfigMap) {
     };
   }
 
-  const storage = await getStorage();
-  if (!storage) {
+  const usePrivate = hasPrivateBucket();
+  const storage = usePrivate ? null : await getStorage();
+  if (!usePrivate && !storage) {
     return { ok: false, skipped: true, reason: 'storage not configured' };
   }
 
@@ -323,18 +332,34 @@ export async function migrateAITaskToR2(taskId: string, configs?: ConfigMap) {
     const key = `ai/${candidate.mediaType}/${dateStr}/${getUuid()}.${ext}`;
 
     try {
-      const uploadResult = await storage.downloadAndUpload({
-        url: candidate.url,
-        key,
-        contentType: contentTypeByExt(ext),
-      });
+      let uploadResult;
+      if (usePrivate) {
+        const response = await fetch(candidate.url, {
+          redirect: 'error',
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!response.ok || !response.body)
+          throw new Error('Provider media download failed');
+        const privateKey = mediaKey(task.userId, ext, 'output');
+        await privateBucket().put(privateKey, response.body, {
+          httpMetadata: { contentType: contentTypeByExt(ext) },
+          customMetadata: { owner: md5(task.userId) },
+        });
+        uploadResult = { success: true, url: privateMediaUrl(privateKey) };
+      } else {
+        uploadResult = await storage!.downloadAndUpload({
+          url: candidate.url,
+          key,
+          contentType: contentTypeByExt(ext),
+        });
+      }
 
       if (uploadResult.success && uploadResult.url) {
         urlMap.set(candidate.url, uploadResult.url);
       } else {
         console.error(
           `Failed to upload ${candidate.url} to R2:`,
-          uploadResult.error
+          'private storage transfer failed'
         );
       }
     } catch (err: any) {
