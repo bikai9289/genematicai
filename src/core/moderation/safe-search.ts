@@ -17,6 +17,55 @@ const likelihoods = [
   'VERY_LIKELY',
 ];
 
+const googleReasons = new Set([
+  'BILLING_DISABLED',
+  'SERVICE_DISABLED',
+  'API_KEY_INVALID',
+  'API_KEY_SERVICE_BLOCKED',
+  'API_KEY_HTTP_REFERRER_BLOCKED',
+  'API_KEY_IP_ADDRESS_BLOCKED',
+  'CONSUMER_INVALID',
+  'PROJECT_DELETED',
+  'RESOURCE_EXHAUSTED',
+  'INVALID_ARGUMENT',
+  'UNAUTHENTICATED',
+  'PERMISSION_DENIED',
+  'INTERNAL',
+  'UNAVAILABLE',
+  'DEADLINE_EXCEEDED',
+]);
+
+function screeningUnavailable(
+  reason: string,
+  status?: number,
+  upstreamCode?: number
+): never {
+  // Only categorical diagnostics: never log images, credentials or upstream messages.
+  console.warn('[media-screening] unavailable', {
+    reason,
+    status,
+    upstreamCode,
+  });
+  throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
+}
+
+async function googleFailure(response: Response): Promise<never> {
+  let reason = 'GOOGLE_HTTP_ERROR';
+  try {
+    const body: any = await response.json();
+    const candidates = [
+      ...(Array.isArray(body.error?.details)
+        ? body.error.details.map((detail: any) => detail?.reason)
+        : []),
+      body.error?.status,
+    ];
+    reason = candidates.find((value) => googleReasons.has(value)) || reason;
+  } catch {
+    /* Preserve the HTTP status without logging the response body. */
+  }
+  return screeningUnavailable(reason, response.status);
+}
+
 export function assertSafeSearchResult(annotation: unknown) {
   if (!annotation || typeof annotation !== 'object')
     throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
@@ -49,20 +98,40 @@ export async function screenImage(body: Uint8Array, apiKey: string) {
       }),
       signal: AbortSignal.timeout(15_000),
     });
-  } catch {
-    throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
+  } catch (error) {
+    screeningUnavailable(
+      error instanceof Error && /Timeout|Abort/.test(error.name)
+        ? 'TIMEOUT'
+        : 'NETWORK_ERROR'
+    );
   }
-  if (!response.ok)
-    throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
+  if (!response.ok) return googleFailure(response);
   let result: any;
   try {
     result = await response.json();
   } catch {
-    throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
+    screeningUnavailable('MALFORMED_RESPONSE');
   }
-  if (result.responses?.length !== 1 || result.responses[0]?.error)
-    throw new MediaPolicyError('MEDIA_SCREENING_UNAVAILABLE', 503);
-  assertSafeSearchResult(result.responses[0].safeSearchAnnotation);
+  if (result.responses?.length !== 1)
+    screeningUnavailable('MISSING_ANNOTATION');
+  if (result.responses[0]?.error) {
+    const code = Number(result.responses[0].error.code);
+    screeningUnavailable(
+      'ANNOTATION_ERROR',
+      response.status,
+      Number.isInteger(code) && code >= 0 && code < 1000 ? code : undefined
+    );
+  }
+  try {
+    assertSafeSearchResult(result.responses[0].safeSearchAnnotation);
+  } catch (error) {
+    if (
+      error instanceof MediaPolicyError &&
+      error.code === 'MEDIA_SCREENING_UNAVAILABLE'
+    )
+      screeningUnavailable('INCOMPLETE_VERDICT');
+    throw error;
+  }
 }
 
 export function detectUploadImage(body: Uint8Array): {

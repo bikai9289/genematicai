@@ -366,6 +366,8 @@ export function VideoGeneratorWorkspace({
     setActiveTab('image-to-video');
 
     setStartImageFile(file);
+    setStartImageUrl('');
+    let uploaded = false;
     const preview = URL.createObjectURL(file);
     setStartImagePreview(preview);
 
@@ -382,6 +384,8 @@ export function VideoGeneratorWorkspace({
       const uploadedUrl = data?.data?.urls?.[0] || data?.data?.url || '';
       if (res.ok && data?.code !== -1 && uploadedUrl) {
         setStartImageUrl(uploadedUrl);
+        setStartImagePreview(uploadedUrl);
+        uploaded = true;
       } else if (isUploadUnauthorized(data?.message, res.status)) {
         setShowAuthModal(true);
       } else {
@@ -401,6 +405,13 @@ export function VideoGeneratorWorkspace({
         );
       }
     } finally {
+      if (!uploaded) {
+        setStartImageFile(null);
+        setStartImageUrl('');
+        setStartImagePreview('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      URL.revokeObjectURL(preview);
       setIsUploading(false);
     }
   };
@@ -427,7 +438,9 @@ export function VideoGeneratorWorkspace({
       toast.error(m['stp.common.image_size_limit_exceeded']());
       return;
     }
-    setEndImagePreview(URL.createObjectURL(file));
+    setEndImageUrl('');
+    const preview = URL.createObjectURL(file);
+    setEndImagePreview(preview);
     const fd = new FormData();
     fd.append('file', file);
     void fetch('/api/storage/upload-image', {
@@ -440,8 +453,12 @@ export function VideoGeneratorWorkspace({
         const url = d?.data?.urls?.[0] || d?.data?.url || '';
         if (r.ok && d?.code !== -1 && url) {
           setEndImageUrl(url);
+          setEndImagePreview(url);
           return;
         }
+        setEndImagePreview('');
+        setEndImageUrl('');
+        if (endFileInputRef.current) endFileInputRef.current.value = '';
         if (isUploadUnauthorized(d?.message, r.status)) {
           setShowAuthModal(true);
           return;
@@ -449,8 +466,12 @@ export function VideoGeneratorWorkspace({
         toast.error(resolveUploadImageErrorMessage(d?.message));
       })
       .catch(() => {
+        setEndImagePreview('');
+        setEndImageUrl('');
+        if (endFileInputRef.current) endFileInputRef.current.value = '';
         toast.error(m['stp.common.image_upload_failed']());
-      });
+      })
+      .finally(() => URL.revokeObjectURL(preview));
   };
   const handleRemoveEndImage = () => {
     setEndImagePreview('');

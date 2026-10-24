@@ -293,6 +293,8 @@ export function ImageGeneratorWorkspace({
     }
 
     setRefImageFile(file);
+    setRefImageUrl('');
+    let uploaded = false;
     const preview = URL.createObjectURL(file);
     setRefImagePreview(preview);
 
@@ -309,6 +311,8 @@ export function ImageGeneratorWorkspace({
       const uploadedUrl = data?.data?.urls?.[0] || data?.data?.url || '';
       if (res.ok && data?.code !== -1 && uploadedUrl) {
         setRefImageUrl(uploadedUrl);
+        setRefImagePreview(uploadedUrl);
+        uploaded = true;
       } else if (isUploadUnauthorized(data?.message, res.status)) {
         setShowAuthModal(true);
       } else {
@@ -328,6 +332,13 @@ export function ImageGeneratorWorkspace({
         );
       }
     } finally {
+      if (!uploaded) {
+        setRefImageFile(null);
+        setRefImageUrl('');
+        setRefImagePreview('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      URL.revokeObjectURL(preview);
       setIsUploading(false);
     }
   };

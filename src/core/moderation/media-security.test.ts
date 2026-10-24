@@ -90,6 +90,16 @@ describe('SafeSearch fails closed', () => {
     );
     expect(fetch).not.toHaveBeenCalled();
   });
+  it('logs only a categorical billing reason, never the credential or Google message', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      vi.mocked(fetch).mockResolvedValue(Response.json({error:{status:'PERMISSION_DENIED',message:'private-message-with-key',details:[{reason:'BILLING_DISABLED'}]}},{status:403}));
+      await expect(screenImage(png,'isolated-secret-key')).rejects.toThrow('MEDIA_SCREENING_UNAVAILABLE');
+      expect(warn).toHaveBeenCalledWith('[media-screening] unavailable',{reason:'BILLING_DISABLED',status:403,upstreamCode:undefined});
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('private-message');
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('isolated-secret-key');
+    } finally { warn.mockRestore(); }
+  });
   it('uses fixed Google endpoint and does not put credentials in a URL', async () => {
     await screenImage(png, 'isolated-key');
     const [url, options] = vi.mocked(fetch).mock.calls[0];

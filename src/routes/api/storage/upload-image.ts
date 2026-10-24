@@ -48,6 +48,7 @@ export async function POST({ request }: { request: Request }) {
   });
   if (limited) return limited;
   const stored: string[] = [];
+  let stage = 'auth';
   try {
     const session = await getAuth().api.getSession({
       headers: request.headers,
@@ -61,6 +62,7 @@ export async function POST({ request }: { request: Request }) {
     if (userLimited) return userLimited;
     if (Number(request.headers.get('content-length')) > MAX_TOTAL + 64 * 1024)
       throw new MediaPolicyError('MEDIA_UPLOAD_TOO_LARGE', 413);
+    stage = 'multipart';
     const form = await boundedFormData(request);
     const files = form.getAll(form.has('files') ? 'files' : 'file');
     if (!files.length) throw new MediaPolicyError('MEDIA_NO_FILES');
@@ -70,19 +72,24 @@ export async function POST({ request }: { request: Request }) {
     const images = files as File[];
     if (images.reduce((size, file) => size + file.size, 0) > MAX_TOTAL)
       throw new MediaPolicyError('MEDIA_UPLOAD_TOO_LARGE', 413);
+    stage = 'private-storage-binding';
     const bucket = privateBucket();
+    stage = 'screening-config';
     const key = (await getConfig('google_cloud_vision_api_key')) || '';
     const checked = [];
     for (const file of images) {
+      stage = 'image-validation';
       if (!file.size || file.size > MAX_FILE)
         throw new MediaPolicyError('MEDIA_FILE_TOO_LARGE', 413);
       const body = new Uint8Array(await file.arrayBuffer());
       const format = detectUploadImage(body);
+      stage = 'google-screening';
       await screenImage(body, key);
       checked.push({ file, body, format });
     }
     const results = [];
     for (const { file, body, format } of checked) {
+      stage = 'private-storage-write';
       const objectKey = mediaKey(session.user.id, format.extension);
       stored.push(objectKey);
       await bucket.put(objectKey, body, {
@@ -109,6 +116,11 @@ export async function POST({ request }: { request: Request }) {
       error instanceof MediaPolicyError
         ? error
         : new MediaPolicyError('MEDIA_UPLOAD_UNAVAILABLE', 503);
+    console.warn('[upload-image] failed', {
+      stage,
+      code: failure.code,
+      errorType: error instanceof Error ? error.name : 'Unknown',
+    });
     return respErr(failure.code, { status: failure.status });
   }
 }
