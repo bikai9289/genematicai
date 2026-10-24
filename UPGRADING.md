@@ -1,5 +1,13 @@
 # Upgrading an existing project
 
+## 2026-10-24 Public page accuracy
+
+- The built-in prompt guide moves from `/posts/8-best-nano-banana-2-prompts` to `/posts/4-nano-banana-2-prompts`; old URLs redirect permanently (301), preserving the active locale. Update external links when practical.
+- Desktop and mobile navigation hide the empty Showcases destination. Its existing noindex policy remains; restore navigation and indexing together only after reviewed content is available.
+- Shared application markup no longer advertises a zero-dollar offer or a nonexistent site search. Home FAQ markup matches the visible questions; it does not promise Google FAQ rich results.
+- All credit packs show Seedance 2.5 costs and separate whole-pack quantities for 480p, 720p and 1080p at five seconds. Starter explicitly warns that its 400 credits cannot cover one 750-credit 1080p clip. Prices and credit charging are unchanged.
+- Sitemap dates represent known significant content changes only. Unknown dates remain omitted; do not replace them with request or build timestamps.
+
 ## 2026-10-23 Environment-only system configuration
 
 - Migrate all active DB settings to deployment Variables/Secrets before deploying this change. Original setting names map to uppercase env names; app public values retain VITE\_ names. Run `pnpm exec tsx scripts/config-env-map.ts` for the complete name map (no values printed).

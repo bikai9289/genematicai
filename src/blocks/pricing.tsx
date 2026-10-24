@@ -106,6 +106,32 @@ export function Pricing({
         m['stp.pricing.credit_count']({ count: product.credits }),
         m['stp.pricing.feat_valid_1y'](),
         m['stp.pricing.model_cost_notice'](),
+        ...['480p', '720p', '1080p'].map((resolution) => {
+          const cost = calculateCredits('seedance-2-5', 'video', {
+            duration: '5s',
+            resolution,
+          });
+          return m['stp.pricing.resolution_example']({
+            resolution,
+            cost,
+            count: Math.floor(product.credits / cost),
+          });
+        }),
+        ...(product.credits <
+        calculateCredits('seedance-2-5', 'video', {
+          duration: '5s',
+          resolution: '1080p',
+        })
+          ? [
+              m['stp.pricing.insufficient_1080p']({
+                cost: calculateCredits('seedance-2-5', 'video', {
+                  duration: '5s',
+                  resolution: '1080p',
+                }),
+              }),
+            ]
+          : []),
+
         m['stp.pricing.failure_refund'](),
       ],
       cta: m['stp.pricing.buy_now'](),

@@ -27,7 +27,6 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [promptsOpen, setPromptsOpen] = useState(false);
-  const [showcasesOpen, setShowcasesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: session } = useSession();
   const user = session?.user;
@@ -217,70 +216,6 @@ export function Header() {
             )}
           </div>
 
-          {/* 作品展厅 (Showcases) Dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setShowcasesOpen(true)}
-            onMouseLeave={() => setShowcasesOpen(false)}
-          >
-            <button
-              type="button"
-              className="text-foreground/90 hover:text-primary flex cursor-pointer items-center gap-1.5 py-2 text-sm font-semibold transition-colors"
-            >
-              <ImageIcon className="text-primary size-4" />
-              <span>
-                {mounted ? m['landing.nav.showcases']() : 'Showcases'}
-              </span>
-              <ChevronDown
-                className={`size-3.5 transition-transform duration-200 ${showcasesOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {showcasesOpen && (
-              <div className="bg-popover/95 text-popover-foreground border-border/80 animate-in fade-in slide-in-from-top-1 absolute top-full left-1/2 z-50 w-64 -translate-x-1/2 rounded-2xl border p-2 shadow-2xl backdrop-blur-xl duration-150">
-                <Link
-                  href="/showcases?type=image"
-                  className="text-foreground hover:bg-muted/80 hover:text-primary flex items-start gap-3 rounded-xl p-2.5 transition-colors"
-                >
-                  <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
-                    <ImageIcon className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold">
-                      {mounted
-                        ? m['landing.nav.showcases_image']()
-                        : 'AI Image Showcases'}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
-                      {mounted
-                        ? m['landing.nav.showcases_image_desc']()
-                        : 'Excellent AI image generations'}
-                    </div>
-                  </div>
-                </Link>
-                <Link
-                  href="/showcases?type=video"
-                  className="text-foreground hover:bg-muted/80 hover:text-primary flex items-start gap-3 rounded-xl p-2.5 transition-colors"
-                >
-                  <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
-                    <Clapperboard className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold">
-                      {mounted
-                        ? m['landing.nav.showcases_video']()
-                        : 'AI Video Showcases'}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
-                      {mounted
-                        ? m['landing.nav.showcases_video_desc']()
-                        : 'Stunning AI video generations'}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            )}
-          </div>
-
           {/* 定价方案 (Pricing) */}
           <Link
             href="/pricing"
@@ -393,34 +328,6 @@ export function Header() {
                   {mounted
                     ? m['landing.nav.prompts_video']()
                     : 'AI Video Prompts'}
-                </Link>
-              </div>
-            </div>
-
-            {/* 作品展厅 */}
-            <div className="border-border/60 space-y-2 border-b py-2">
-              <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase">
-                <ImageIcon className="text-primary size-3.5" />
-                {mounted ? m['landing.nav.showcases']() : 'Showcases'}
-              </span>
-              <div className="flex flex-col gap-2 pl-3">
-                <Link
-                  href="/showcases?type=image"
-                  className="text-foreground/80 hover:text-primary text-sm font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {mounted
-                    ? m['landing.nav.showcases_image']()
-                    : 'AI Image Showcases'}
-                </Link>
-                <Link
-                  href="/showcases?type=video"
-                  className="text-foreground/80 hover:text-primary text-sm font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {mounted
-                    ? m['landing.nav.showcases_video']()
-                    : 'AI Video Showcases'}
                 </Link>
               </div>
             </div>

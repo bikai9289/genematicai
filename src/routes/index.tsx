@@ -89,11 +89,6 @@ export const Route = createFileRoute('/')({
           ),
         },
         {
-          name: 'keywords',
-          content:
-            'photo to video ai, ai video generator from photo, cinematic ai video, free ai video generator',
-        },
-        {
           property: 'og:title',
           content: m['genematic.home.title']({}, { locale: locale as any }),
         },
@@ -116,6 +111,28 @@ export const Route = createFileRoute('/')({
             {},
             { locale: locale as any }
           ),
+        },
+      ],
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              [m['landing.faq.q1'], m['landing.faq.a1']],
+              [m['landing.faq.q2'], m['landing.faq.a2']],
+              [m['landing.faq.q3'], m['landing.faq.a3']],
+              [m['landing.faq.q4'], m['landing.faq.a4']],
+            ].map(([question, answer]) => ({
+              '@type': 'Question',
+              name: question({}, { locale: locale as any }),
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: answer({}, { locale: locale as any }),
+              },
+            })),
+          }).replace(/</g, '\\u003c'),
         },
       ],
       links: [

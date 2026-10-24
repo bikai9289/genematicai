@@ -2822,9 +2822,9 @@
   "app.nav.prompts": "Prompts",
   "app.nav.showcases": "Showcases",
   "app.generator.image_title": "AI Image Generator",
-  "app.generator.image_subtitle": "Transform your ideas into stunning, photorealistic visuals and concept art with next-gen models.",
+  "app.generator.image_subtitle": "Generate images from text or edit reference images. Model and resolution determine credit cost; results may need several attempts and can vary from your prompt.",
   "app.generator.video_title": "AI Video Generator",
-  "app.generator.video_subtitle": "Bring text prompts and still imagery into fluid, cinematic motion with advanced motion synthesis models.",
+  "app.generator.video_subtitle": "Generate video from text or a still image. Select a model, duration, and resolution to see the credit cost before generating; exact motion and subject consistency are not guaranteed.",
   "app.generator.text_to_image": "Text to Image",
   "app.generator.image_to_image": "Image to Image",
   "app.generator.model_selection": "Model Selection",
@@ -3273,7 +3273,7 @@
   "genematic.face_swap.faq8_a": "The image-to-video workspace accepts supported reference images such as JPG and PNG. It does not accept MP4 or MOV as source videos for face replacement.",
   "genematic.face_swap.faq9_q": "Is Genematicai the same as Genematic?",
   "genematic.face_swap.faq9_a": "Genematicai is an independent third-party AI video tool and is not affiliated with any similarly named brand.",
-  "genematic.home.title": "Photo to Video AI — AI Video Generator from Photo, Free",
+  "genematic.home.title": "Photo to Video AI — AI Video Generator with Free Credits",
   "genematic.home.meta_description": "Turn any photo into a cinematic AI video in minutes. Pick a scene, start with free credits, and create in your browser with no app to install.",
   "stp.pricing.coming_soon": "Coming soon",
   "stp.blog.updated_at": "Updated {date}",
@@ -3289,5 +3289,7 @@
   "generation.media_consent": "I own or have permission to use these materials. Any real person shown is me or has explicitly authorized this use in writing.",
   "generation.media_consent_required": "Confirm your rights to the reference materials before uploading or generating.",
   "admin.settings.environment_title": "Deployment-managed configuration",
-  "admin.settings.environment_description": "System settings are managed through Cloudflare Variables and Secrets. Online configuration editing and provider tests have been disabled."
+  "admin.settings.environment_description": "System settings are managed through Cloudflare Variables and Secrets. Online configuration editing and provider tests have been disabled.",
+  "stp.pricing.resolution_example": "Seedance 2.5 · 5s: {resolution} costs {cost} credits; this pack covers {count} videos when used only at this setting.",
+  "stp.pricing.insufficient_1080p": "This pack alone cannot cover one Seedance 2.5 video at 1080p / 5s ({cost} credits)."
 }

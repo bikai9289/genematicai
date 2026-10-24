@@ -2821,9 +2821,9 @@
   "app.nav.prompts": "提示词库",
   "app.nav.showcases": "作品展示",
   "app.generator.image_title": "AI 图像生成器",
-  "app.generator.image_subtitle": "利用下一代视觉模型，将您的灵感转化为令人惊叹的高清画面与概念艺术。",
+  "app.generator.image_subtitle": "通过文字生成图片，或编辑参考图片。积分消耗取决于模型和分辨率；结果可能需要多次尝试，也可能偏离提示词。",
   "app.generator.video_title": "AI 视频生成器",
-  "app.generator.video_subtitle": "借助前沿运动合成模型，让提示词与静态画面化为流畅的电影级动效。",
+  "app.generator.video_subtitle": "通过文字或静态图片生成视频。选择模型、时长和分辨率后可查看积分消耗；不保证精确动作或主体始终一致。",
   "app.generator.text_to_image": "文生图",
   "app.generator.image_to_image": "图生图",
   "app.generator.model_selection": "模型选择",
@@ -3272,7 +3272,7 @@
   "genematic.face_swap.faq8_a": "图片转视频工作台接收支持的参考图片，例如 JPG 和 PNG；不接收用于替换人脸的 MP4 或 MOV 源视频。",
   "genematic.face_swap.faq9_q": "Genematicai 和 Genematic 是同一个品牌吗？",
   "genematic.face_swap.faq9_a": "Genematicai 是独立的第三方 AI 视频工具，与任何同名或近似品牌没有关联。",
-  "genematic.home.title": "Photo to Video AI —— AI 图片转视频生成器，免费开始",
+  "genematic.home.title": "照片转视频 AI — AI 视频生成器，提供免费积分",
   "genematic.home.meta_description": "几分钟内把照片变成电影感 AI 视频。选择场景，使用免费积分，在浏览器里创作，无需安装 App。",
   "stp.pricing.coming_soon": "即将上线",
   "stp.blog.updated_at": "更新于 {date}",
@@ -3288,5 +3288,7 @@
   "generation.media_consent": "我拥有这些素材的使用权或已获授权。其中的真人肖像为我本人，或已获得该人对此用途的明确书面授权。",
   "generation.media_consent_required": "上传或生成前，请先确认参考素材的使用授权。",
   "admin.settings.environment_title": "配置由部署环境管理",
-  "admin.settings.environment_description": "系统配置已改由 Cloudflare Variables 和 Secrets 管理，网站中的配置编辑与供应商测试入口已停用。"
+  "admin.settings.environment_description": "系统配置已改由 Cloudflare Variables 和 Secrets 管理，网站中的配置编辑与供应商测试入口已停用。",
+  "stp.pricing.resolution_example": "Seedance 2.5 · 5 秒：{resolution} 每条需 {cost} 积分；整包仅用于此设置时可生成 {count} 条。",
+  "stp.pricing.insufficient_1080p": "此积分包单独不足以生成一条 Seedance 2.5 的 1080p / 5 秒视频（需 {cost} 积分）。"
 }

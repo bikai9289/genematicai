@@ -18,16 +18,10 @@ export const Route = createFileRoute('/video-face-swap')({
     }).href;
     const questions = faqNumbers.map((n) => ({
       '@type': 'Question',
-      name: m[`genematic.face_swap.faq${n}_q` as keyof typeof m](
-        {},
-        { locale }
-      ),
+      name: m[`genematic.face_swap.faq${n}_q`]({}, { locale }),
       acceptedAnswer: {
         '@type': 'Answer',
-        text: m[`genematic.face_swap.faq${n}_a` as keyof typeof m](
-          {},
-          { locale }
-        ),
+        text: m[`genematic.face_swap.faq${n}_a`]({}, { locale }),
       },
     }));
     return {
@@ -90,7 +84,7 @@ export const Route = createFileRoute('/video-face-swap')({
                 name: m['genematic.face_swap.title']({}, { locale }),
                 applicationCategory: 'MultimediaApplication',
                 operatingSystem: 'Web',
-                offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+                isAccessibleForFree: false,
               },
               { '@type': 'FAQPage', mainEntity: questions },
             ],

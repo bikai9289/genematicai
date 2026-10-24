@@ -56,8 +56,18 @@ export const Route = createFileRoute('/sitemap.xml')({
       GET: async () => {
         const entries: Entry[] = STATIC_PATHS.map((path) => ({
           path,
-          changeFrequency:
-            path === '' || path.includes('generator') ? 'daily' : 'weekly',
+          // Only dates of significant content changes, never request/build time.
+          lastModified: [
+            '',
+            '/pricing',
+            '/ai-image-generator',
+            '/ai-video-generator',
+            '/posts',
+            '/video-face-swap',
+          ].includes(path)
+            ? '2026-10-24'
+            : undefined,
+          changeFrequency: 'monthly',
           priority: path === '' ? 1 : path.includes('generator') ? 0.9 : 0.8,
         }));
 

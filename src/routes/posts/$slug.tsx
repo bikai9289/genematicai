@@ -1,5 +1,5 @@
 import React from 'react';
-import { createFileRoute, notFound } from '@tanstack/react-router';
+import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 
 import { Link } from '@/core/i18n/navigation';
 import { envConfigs } from '@/config';
@@ -16,6 +16,15 @@ import {
 export const Route = createFileRoute('/posts/$slug')({
   loader: ({ params }) => {
     const locale = getLocale();
+    if (params.slug === '8-best-nano-banana-2-prompts') {
+      throw redirect({
+        href: localizeUrl(
+          `${envConfigs.app_url}/posts/4-nano-banana-2-prompts`,
+          { locale }
+        ).href,
+        statusCode: 301,
+      });
+    }
     const post = getBlogPost(params.slug, locale);
     if (!post) {
       throw notFound();

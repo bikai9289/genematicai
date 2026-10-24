@@ -171,11 +171,6 @@ export const Route = createRootRoute({
           url: appUrl,
           name: appName,
           description: appDescription,
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: `${appUrl}/workspace?q={search_term_string}`,
-            'query-input': 'required name=search_term_string',
-          },
         },
         {
           '@type': 'Organization',
@@ -192,11 +187,7 @@ export const Route = createRootRoute({
           operatingSystem: 'All',
           description: appDescription,
           url: `${appUrl}/workspace`,
-          offers: {
-            '@type': 'Offer',
-            price: '0',
-            priceCurrency: 'USD',
-          },
+          isAccessibleForFree: false,
         },
       ],
     };
@@ -210,10 +201,6 @@ export const Route = createRootRoute({
         },
         { title: appName },
         { name: 'description', content: appDescription },
-        {
-          name: 'keywords',
-          content: `AI video generator, AI image generator, text to video, text to image, image to video, AI studio, ${appName}`,
-        },
         {
           name: 'robots',
           content:
